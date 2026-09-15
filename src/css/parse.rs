@@ -174,11 +174,11 @@ pub fn parse_sheet(css: &str) -> Sheet {
                         // ignoring the condition (we apply everything we can).
                         Media::default()
                     };
-                    media_stack.push(cond);
+                    media_stack.push(cond.clone());
                     let inner = &css[block.1..block.2];
                     let sub = parse_sheet(inner);
                     media_stack.pop();
-                    let media = merge_media(&media_stack, &sub_media_of(&cond));
+                    let media = merge_media(&media_stack, &Some(cond));
                     for mut r in sub.rules {
                         r.media = media.clone();
                         r.order = order;
@@ -328,10 +328,6 @@ pub fn parse_sheet(css: &str) -> Sheet {
         });
     }
     sheet
-}
-
-fn sub_media_of(m: &Media) -> Option<Media> {
-    Some(m.clone())
 }
 
 fn merge_media(stack: &[Media], inner: &Option<Media>) -> Option<Media> {
@@ -539,15 +535,8 @@ fn parse_declarations(body: &str) -> Vec<Decl> {
         }
         let mut value = value.trim().to_string();
         let mut important = false;
-        if let Some(stripped) = value
-            .strip_suffix("!important")
-            .or_else(|| value.to_ascii_lowercase().strip_suffix("! important"))
-            .map(|s| s.to_string())
-        {
-            value = stripped.trim().to_string();
-            important = true;
-        } else if let Some(pos) = value.rfind('!') {
-            if value[pos..].to_ascii_lowercase().replace(' ', "") == "!important" {
+        if let Some(pos) = value.rfind('!') {
+            if value[pos..].replace(' ', "").eq_ignore_ascii_case("!important") {
                 value = value[..pos].trim().to_string();
                 important = true;
             }
@@ -641,7 +630,7 @@ pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<
     match name {
         "margin" | "padding" => {
             let parts = split_top_sep(v, ' ');
-            let (t, r, b, l) = box_sides(&parts);
+            let [t, r, b, l] = box_sides(&parts);
             for (side, val) in [
                 ("top", t),
                 ("right", r),
@@ -659,7 +648,7 @@ pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<
         }
         "inset" => {
             let parts = split_top_sep(v, ' ');
-            let (t, r, b, l) = box_sides(&parts);
+            let [t, r, b, l] = box_sides(&parts);
             push(out, "top", t);
             push(out, "right", r);
             push(out, "bottom", b);
@@ -720,7 +709,7 @@ pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<
         "border-width" | "border-style" | "border-color" => {
             let suffix = name.strip_prefix("border-").unwrap_or("");
             let parts = split_top_sep(v, ' ');
-            let (t, r, b, l) = box_sides(&parts);
+            let [t, r, b, l] = box_sides(&parts);
             for (side, val) in [
                 ("top", t),
                 ("right", r),
@@ -737,7 +726,7 @@ pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<
             let vpart = parts.get(1).map(|s| split_top_sep(s, ' '));
             let vert = match &vpart {
                 Some(list) => {
-                    let (a, b, c, d) = box_sides(list);
+                    let [a, b, c, d] = box_sides(list);
                     [a, b, c, d]
                 }
                 None => [tl, tr, br, bl],

@@ -411,7 +411,7 @@ fn style_subtree(
                 value
             };
             if name.starts_with("--") {
-                customs.insert(name.clone(), value);
+                customs.insert(name.to_string(), value);
                 continue;
             }
             chosen.push((name.to_string(), value));
@@ -1351,7 +1351,7 @@ fn parse_overflow(v: &str) -> Overflow {
 
 fn parse_radius(v: &str, fs: f32, root_font: f32, vp: Viewport, _default: f32) -> f32 {
     // `border-radius: 10px / 5px` keeps the horizontal component.
-    let h = split_top(v, '/').map(|(a, _)| a).unwrap_or(v).to_string();
+    let h = split_top_sep(v, '/').into_iter().next().unwrap_or_else(|| v.to_string());
     let first = split_top_sep(&h, ' ')
         .into_iter()
         .next()

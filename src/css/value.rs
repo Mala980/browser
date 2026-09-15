@@ -138,7 +138,8 @@ fn trim_num(v: f32) -> String {
 }
 
 /// `12.5px` -> (12.5, "px"). Also handles `+3`, `.5em`, `1e2px`.
-fn split_number_unit(t: &str) -> Option<(f32, String)> {
+/// Split `12px`/`1.5em` into (number, unit); the unit is lowercased.
+pub fn split_number_unit(t: &str) -> Option<(f32, String)> {
     let b = t.as_bytes();
     let mut i = 0usize;
     if i < b.len() && (b[i] == b'+' || b[i] == b'-') {

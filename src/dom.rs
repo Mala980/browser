@@ -174,6 +174,11 @@ impl Dom {
             .find(|&n| self.tag(n) == "body")
     }
 
+    /// Node count (arena size) - styles and layout index by node id.
+    pub fn len(&self) -> usize {
+        self.nodes.len()
+    }
+
     pub fn mark_dirty(&mut self) {
         self.revision += 1;
     }

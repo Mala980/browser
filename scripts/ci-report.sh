@@ -1,52 +1,79 @@
 #!/usr/bin/env bash
 # Turn a cargo build/test log into GitHub annotations.
 #
-# Raw action logs are not always retrievable from automation, and iterating on a
-# Rust codebase without seeing `rustc` output is hopeless, so CI pipes every build
-# through this: each `error[Exxxx]: ...` block becomes an annotation on the step.
+# Raw action logs are not always retrievable from automation (this project is
+# developed in a sandbox where CI is the compiler), and rustc output is the one
+# thing that must survive. So CI pipes every build through here: diagnostics are
+# stripped of ANSI colours, compacted to `file:line:col message` and emitted as a
+# couple of annotations that the API can read back in full.
 #
-# usage: scripts/ci-report.sh <logfile> [--max 12]
+# usage: scripts/ci-report.sh <logfile>
 set -uo pipefail
 log="${1:-/dev/stdin}"
-max=12
-if [ "${2:-}" = "--max" ]; then max="${3:-12}"; fi
 
 if [ ! -s "$log" ]; then
   echo "::warning::no build log captured"
   exit 0
 fi
 
-python3 - "$log" "$max" <<'PY'
+python3 - "$log" <<'PY'
 import re, sys
-path, maxn = sys.argv[1], int(sys.argv[2])
+path = sys.argv[1]
 try:
-    text = open(path, encoding="utf-8", errors="replace").read()
+    raw = open(path, encoding="utf-8", errors="replace").read()
 except OSError as e:
     print(f"::warning::cannot read log: {e}")
     sys.exit(0)
 
-def esc(s):
-    return (s.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
-             .replace("]", "%5D"))
+ansi = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+text = ansi.sub("", raw)
 
-blocks = re.split(r"(?m)^(?=(?:error|warning: unused)[^\n]*\n)", text)
-SKIP = ("error: aborting due to", "error: could not compile", "error: could not find")
-errors = [b for b in blocks if b.startswith("error") and not b.startswith(SKIP)]
-if not errors:
-    tail = text[-3500:]
-    print("::error::build failed without a recognised rustc error block%0A%0A" + esc(tail))
-    sys.exit(0)
 
-# rustc prints each diagnostic as "error[E0308]: message\n  --> file:line:col\n..."
-for b in errors[:maxn]:
-    lines = [l.rstrip() for l in b.splitlines() if l.strip()]
-    head = lines[0][:300]
-    loc = next((l.strip() for l in lines if l.strip().startswith("-->")), "")
-    ctx = " | ".join(l.strip() for l in lines[1:6])[:1200]
-    title = re.sub(r"^error(\[[^\]]+\])?:\s*", "", head)
-    print(f"::error title=rustc error::{esc(loc)}%0A{esc(head)}%0A{esc(ctx)}")
-extra = len(errors) - maxn
-if extra > 0:
-    print(f"::warning title=more errors::{extra} further rustc error(s) in the log")
+def esc(s, limit=58000):
+    s = s[:limit]
+    return s.replace("%", "%25").replace("\r", "").replace("\n", "%0A").replace("]", "%5D")
+
+
+# One line per diagnostic: "error[E0308]: msg" followed by its first "-->" location.
+items = []
+lines = text.splitlines()
+i = 0
+while i < len(lines):
+    l = lines[i].strip()
+    m = re.match(r"^(error(?:\[[EW]\d+\])?!?): (.*?)(?:\[E\d+\])?$", l)
+    if m and not l.startswith(("error: aborting", "error: could not")):
+        kind, msg = m.group(1), l[len(m.group(1)) + 2:].strip()
+        loc = ""
+        for j in range(i + 1, min(i + 8, len(lines))):
+            s = lines[j].strip()
+            if s.startswith("-->"):
+                loc = s[3:].strip()
+                break
+            if s.startswith(("error", "warning")):
+                break
+        items.append((kind, loc, msg))
+    elif l.startswith("warning: ") and "generated" not in l and i > 0:
+        pass
+    i += 1
+
+if not items:
+    print("::error title=build failure::" + esc(text[-6000:]))
+    sys.exit(1)
+
+compact = []
+for kind, loc, msg in items[:120]:
+    compact.append(f"{kind} {loc}: {msg}" if loc else f"{kind}: {msg}")
+print(f"::error title=rustc diagnostics ({len(items)})::" + esc("\n".join(compact)))
+
+# One full block (the first error, with its snippet) for context.
+first = re.search(r"(?m)^error(?:\[[EW]?\d*\])?: .*$", text)
+if first:
+    block = text[first.start():first.start() + 2400]
+    print("::error title=first error (annotated)::" + esc(block))
+
+# Test failures are reported as "failures:" with a name list.
+tf = re.search(r"(?m)^failures:$", text)
+if tf:
+    print("::error title=test failures::" + esc(text[tf.start():tf.start() + 3000]))
 sys.exit(1)
 PY

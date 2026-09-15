@@ -403,7 +403,7 @@ pub fn gunzip(src: &[u8]) -> Result<Vec<u8>> {
             return Err("gzip: output too large".to_string());
         }
         // The trailer starts at the next byte boundary after the deflate stream.
-        let mut q = p + br.consumed();
+        let q = p + br.consumed();
         if q + 8 > src.len() {
             return Err("gzip: truncated trailer".to_string());
         }

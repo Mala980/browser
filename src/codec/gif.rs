@@ -304,7 +304,7 @@ fn decode_lzw(data: &[u8], min_code_size: u8, expect: usize) -> Result<Vec<u8>> 
         }
         let mut guard = 0usize;
         while c > end {
-            if guard >= 4096 {
+            if guard >= 4095 || sp >= stack.len() {
                 return Err("gif: LZW chain too long".to_string());
             }
             stack[sp] = suffix[c as usize];

@@ -90,7 +90,8 @@ fn civil(secs: i64) -> (i64, u32, u32, u32, u32, u32, u32) {
     let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
     let mp = (5 * doy + 2) / 153;
     let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
-    let m = (mp + if mp < 10 { 3 } else { -9 }) as u32;
+    // mp is the "months since March" index: 0..9 -> Mar..Dec, 10..11 -> Jan..Feb.
+    let m = if mp < 10 { (mp + 3) as u32 } else { (mp - 9) as u32 };
     if m <= 2 {
         y += 1;
     }
@@ -149,7 +150,11 @@ pub fn parse_http_date(text: &str) -> Option<u64> {
     {
         return None;
     }
-    Some(days_from_civil(ynum, mnum, dnum) * 86_400 + h * 3600 + mi * 60 + sc)
+    let secs = days_from_civil(ynum, mnum, dnum) * 86_400 + h * 3600 + mi * 60 + sc;
+    if secs < 0 {
+        return None;
+    }
+    Some(secs as u64)
 }
 
 fn month_name_to_num(m: &str) -> Option<i64> {

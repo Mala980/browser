@@ -40,7 +40,7 @@ impl OnceInstant {
         if g.is_none() {
             *g = Some(Instant::now());
         }
-        match g {
+        match *g {
             Some(t) => t.elapsed().as_secs_f64() * 1000.0,
             None => 0.0,
         }

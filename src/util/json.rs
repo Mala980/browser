@@ -4,7 +4,7 @@
 //! our own. Objects keep insertion order (`Vec<(String, Json)>`) which matters
 //! for stable `--dump-json` output and for diffing CDP payloads in tests.
 
-use crate::util::{Error, Result};
+use crate::util::Result;
 use std::fmt::Write as _;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -396,7 +396,7 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        let txt = std::str::from_utf8(&self.b[start..self.i]).map_err(|_| "bad number")?;
+        let txt = std::str::from_utf8(&self.b[start..self.i]).map_err(|_| "bad number".to_string())?;
         match txt.parse::<f64>() {
             Ok(v) if v.is_finite() => Ok(Json::Num(v)),
             _ => self.err("bad number"),
@@ -420,7 +420,7 @@ impl<'a> Parser<'a> {
                 }
                 b'\\' => {
                     self.i += 1;
-                    let esc = self.peek().ok_or_else(|| "bad escape".to_string() as Error)?;
+                    let esc = self.peek().ok_or_else(|| "bad escape".to_string())?;
                     self.i += 1;
                     match esc {
                         b'n' => out.push('\n'),

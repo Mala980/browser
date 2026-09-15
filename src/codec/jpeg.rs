@@ -287,7 +287,10 @@ impl<'a> Jpg<'a> {
                     self.restart = self.u16(body) as usize;
                 }
                 0xe1 => {
-                    self.orientation = exif_orientation(self.d[body..self.pos + len].as_ref());
+                    let end = (self.pos + len).min(self.d.len());
+                    if body < end {
+                        self.orientation = exif_orientation(&self.d[body..end]);
+                    }
                 }
                 _ => {}
             }
@@ -423,6 +426,10 @@ impl<'a> Jpg<'a> {
             if ss != 0 || se != 63 || ah != 0 || al != 0 || self.progressive {
                 return Err("jpeg: progressive/multi-scan AC unsupported".to_string());
             }
+            // Copy the scan's tables out of `self` so entropy decoding can mutate
+            // coefficient storage while reading them (borrow-splitting by field).
+            let dc_tab: Vec<Huff> = (0..4).map(|i| self.dc[i].clone()).collect();
+            let ac_tab: Vec<Huff> = (0..4).map(|i| self.ac[i].clone()).collect();
             let mut br = BitReader::new(self.d, self.pos);
             let mut mcu_seen = 0usize;
             'mcus: for my in 0..self.mcu_h {
@@ -438,7 +445,9 @@ impl<'a> Jpg<'a> {
                         for by in 0..vb {
                             for bx in 0..hb {
                                 let blk = (my * vb + by) * blocks_per_row + (mx * hb + bx);
-                                if let Err(e) = self.decode_block(&mut br, ci, blk, dct, act) {
+                                if let Err(e) =
+                                    self.decode_block(&mut br, ci, blk, &dc_tab[dct], &ac_tab[act])
+                                {
                                     if br.marker != 0 {
                                         // Entropy data ended at a marker (normal for
                                         // the last MCU); finish the scan politely.
@@ -523,18 +532,16 @@ impl<'a> Jpg<'a> {
         br: &mut BitReader,
         ci: usize,
         blk: usize,
-        dct: usize,
-        act: usize,
+        dc: &Huff,
+        ac: &Huff,
     ) -> Result<()> {
         let base = blk * 64;
         if base + 64 > self.comps[ci].coefs.len() {
             return Err("jpeg: block index out of range".to_string());
         }
-        let dc = self
-            .dc
-            .get(dct.min(3))
-            .filter(|h| h.usable())
-            .ok_or_else(|| "jpeg: missing DC table".to_string())?;
+        if !dc.usable() {
+            return Err("jpeg: missing DC table".to_string());
+        }
         let rs = br.symbol(dc)?;
         let diff = br.receive(rs as u32)?;
         self.comps[ci].dc_pred += diff;
@@ -542,11 +549,9 @@ impl<'a> Jpg<'a> {
         if self.comps[ci].coefs[base] > 2047 || self.comps[ci].coefs[base] < -2047 {
             return Err("jpeg: DC out of range".to_string());
         }
-        let ac = self
-            .ac
-            .get(act.min(3))
-            .filter(|h| h.usable())
-            .ok_or_else(|| "jpeg: missing AC table".to_string())?;
+        if !ac.usable() {
+            return Err("jpeg: missing AC table".to_string());
+        }
         let mut k = 1usize;
         while k < 64 {
             let rs = br.symbol(ac)?;

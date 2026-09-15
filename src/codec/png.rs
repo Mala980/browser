@@ -383,7 +383,7 @@ pub fn encode_with(width: u32, height: u32, rgba: &[u8], dpi: f32, level: u32) -
     let mut best_buf = vec![0u8; stride];
     let mut score_buf = vec![0i64; stride];
     for y in 0..h {
-        let row = &rgba[y * stride..(y + 1) * stride.min(rgba.len())];
+        let row = &rgba[y * stride..(((y + 1) * stride).min(rgba.len()))];
         for i in 0..stride {
             cur[i] = *row.get(i).unwrap_or(&0);
         }

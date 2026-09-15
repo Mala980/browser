@@ -7,6 +7,15 @@
 
 use crate::css::selector::{self, SelectorSet};
 use crate::util::Result;
+use std::collections::HashMap;
+
+/// Interaction state, consulted by `:hover` / `:focus` / `:active`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ElementState {
+    pub hovered: bool,
+    pub pressed: bool,
+    pub focused: bool,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -43,9 +52,11 @@ impl Node {
 pub struct Dom {
     pub nodes: Vec<Node>,
     pub document: usize,
-    /// Bumped by every mutation; style/layout caches key off it.
+    /// Bumped by every mutation; style/cache invalidation keys off it.
     pub revision: u64,
     next_id: usize,
+    pub states: HashMap<usize, ElementState>,
+    pub focus: Option<usize>,
 }
 
 impl Default for Dom {
@@ -61,6 +72,8 @@ impl Dom {
             document: 0,
             revision: 0,
             next_id: 1,
+            states: HashMap::new(),
+            focus: None,
         };
         d.document = d.alloc(Kind::Document, "#document".to_string());
         d
@@ -135,6 +148,47 @@ impl Dom {
 
     pub fn mark_dirty(&mut self) {
         self.revision += 1;
+    }
+
+    pub fn state(&self, id: usize) -> ElementState {
+        self.states.get(&id).copied().unwrap_or_default()
+    }
+
+    pub fn set_state(&mut self, id: usize, st: ElementState) {
+        if st == ElementState::default() {
+            self.states.remove(&id);
+        } else {
+            self.states.insert(id, st);
+        }
+    }
+
+    /// Move focus; the previously focused node loses `:focus`.
+    pub fn set_focus(&mut self, id: Option<usize>) {
+        if let Some(prev) = self.focus {
+            let mut s = self.state(prev);
+            s.focused = false;
+            self.set_state(prev, s);
+        }
+        self.focus = id;
+        if let Some(n) = id {
+            let mut s = self.state(n);
+            s.focused = true;
+            self.set_state(n, s);
+        }
+        self.mark_dirty();
+    }
+
+    /// Every element below `id` in document order (used by `:has()`).
+    pub fn descendants(&self, id: usize) -> Vec<usize> {
+        let mut out = Vec::new();
+        let kids = self.children(id);
+        for k in kids {
+            if self.is_element(k) {
+                out.push(k);
+            }
+            out.extend(self.descendants(k));
+        }
+        out
     }
 
     pub fn append(&mut self, parent: usize, child: usize) {

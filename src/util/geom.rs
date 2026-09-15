@@ -436,7 +436,7 @@ fn lookup_keyword(name: &str) -> Option<Color> {
     None
 }
 
-const CSS_COLORS: [(&str, &str); 84] = [
+const CSS_COLORS: &[(&str, &str)] = [
     ("aliceblue", "f0f8ff"),
     ("antiquewhite", "faebd7"),
     ("aqua", "00ffff"),

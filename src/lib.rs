@@ -30,6 +30,7 @@ pub mod cli;
 pub mod codec;
 pub mod css;
 pub mod dom;
+pub mod font;
 pub mod html;
 pub mod net;
 pub mod util;

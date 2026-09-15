@@ -111,6 +111,20 @@ fn selftest() -> i32 {
         crate::codec::sha1::websocket_accept("dGhlIHNhbXBsZSBub25jZQ==") == "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
     );
     check("json parse", Json::parse(r#"{"a":[1,2,{"b":null}]}"#).is_ok());
+    // The font fixture ships with the repo; a missing file skips, never fails.
+    match crate::font::tt::Face::parse_file("tests/data/kilat-mini.ttf") {
+        Ok(f) => {
+            let ok = f.units_per_em == 1000
+                && f.ascender == 800
+                && f.glyph_for('A') == Some(2)
+                && f.outline(2).map(|c| c[0].pts.len()) == Ok(6)
+                && (f.measure("A", 20.0, false) - 14.4).abs() < 0.01;
+            check("font metrics (mini ttf)", ok);
+        }
+        Err(e) => {
+            println!("{:<28} skipped ({e})", "font metrics (mini ttf)");
+        }
+    }
     if failures == 0 {
         println!("all selftests passed");
         OK
@@ -226,6 +240,70 @@ fn dev(args: &[String]) -> i32 {
         "ws-accept" => {
             let key = args.get(2).cloned().unwrap_or_default();
             println!("{}", crate::codec::sha1::websocket_accept(&key));
+            OK
+        }
+        "font-info" => {
+            let path = match args.get(2) {
+                Some(p) => p.clone(),
+                None => {
+                    eprintln!("kilat dev font-info <file.ttf|file.woff>");
+                    return USAGE_ERROR;
+                }
+            };
+            match crate::font::tt::Face::parse_file(&path) {
+                Ok(f) => {
+                    let json = Json::object(vec![
+                        ("file", Json::Str(path.clone())),
+                        ("family", Json::Str(f.family.clone())),
+                        ("subfamily", Json::Str(f.subfamily.clone())),
+                        ("full_name", Json::Str(f.full_name.clone())),
+                        ("postscript_name", Json::Str(f.postscript_name.clone())),
+                        ("units_per_em", Json::Num(f.units_per_em as f64)),
+                        ("ascender", Json::Num(f.ascender as f64)),
+                        ("descender", Json::Num(f.descender as f64)),
+                        ("line_gap", Json::Num(f.line_gap as f64)),
+                        ("x_height", Json::Num(f.x_height as f64)),
+                        ("cap_height", Json::Num(f.cap_height as f64)),
+                        ("weight", Json::Num(f.weight as f64)),
+                        ("italic", Json::Bool(f.italic)),
+                        ("bold", Json::Bool(f.bold)),
+                        ("fixed_pitch", Json::Bool(f.fixed_pitch)),
+                        ("num_glyphs", Json::Num(f.num_glyphs as f64)),
+                        ("covered", Json::Num(f.glyph_count() as f64)),
+                        ("cff", Json::Bool(f.is_cff)),
+                        ("outlines", Json::Bool(f.has_outlines)),
+                        ("adv_A", Json::Num(f.glyph_for('A').map(|g| f.advance_units(g) as f64).unwrap_or(0.0))),
+                        ("measure_A_16px", Json::Num(f.measure("A", 16.0, false) as f64)),
+                    ]);
+                    println!("{}", json.to_pretty());
+                    OK
+                }
+                Err(e) => {
+                    eprintln!("kilat dev font-info: {e}");
+                    RUNTIME_ERROR
+                }
+            }
+        }
+        "fonts" => {
+            let mut db = crate::font::FontDB::new();
+            if let Some(dir) = args.get(2) {
+                db.load_dir(std::path::Path::new(dir));
+            } else {
+                for d in crate::font::font_dirs() {
+                    db.load_dir(&d);
+                }
+            }
+            println!("{} face(s) from {} file(s)", db.faces.len(), db.scanned_files);
+            for (i, f) in db.faces.iter().enumerate() {
+                println!(
+                    "  {i:>3} {:<28} {:<12} {:>4} {}{}",
+                    f.family,
+                    f.subfamily,
+                    f.weight,
+                    if f.has_outlines { "glyf" } else if f.is_cff { "cff" } else { "--" },
+                    if f.italic { " italic" } else { "" }
+                );
+            }
             OK
         }
         other => {

@@ -206,9 +206,13 @@ impl Face {
         if let Some(os2) = slice("OS/2") {
             let ver = u16at(os2, 0);
             weight = u16at(os2, 4).max(1);
+            // fsSelection: bit0 ITALIC, bit5 BOLD, bit6 REGULAR.
             let fsel = u16at(os2, 62);
-            italic = fsel & 0x20 != 0 && fsel & 0x40 == 0;
-            bold = fsel & 0x200000 != 0 || weight >= 700;
+            if fsel != 0 {
+                italic = fsel & 0x01 != 0;
+                bold = fsel & 0x20 != 0;
+            }
+            bold |= weight >= 700;
             if ver >= 1 {
                 let ta = i16at(os2, 68);
                 let td = i16at(os2, 70);

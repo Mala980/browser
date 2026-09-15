@@ -729,30 +729,47 @@ fn exif_orientation(app1: &[u8]) -> u32 {
         return 1;
     }
     let t = &app1[6..];
+    if t.len() < 8 {
+        return 1;
+    }
     let le = t[0] == b'I';
     let g16 = |i: usize| -> Option<u32> {
+        if i + 2 > t.len() {
+            return None;
+        }
         Some(if le {
-            u16::from_le_bytes(*t.get(i..i + 2)?) as u32
+            u16::from_le_bytes([t[i], t[i + 1]]) as u32
         } else {
-            u16::from_be_bytes(*t.get(i..i + 2)?) as u32
+            u16::from_be_bytes([t[i], t[i + 1]]) as u32
         })
     };
     let g32 = |i: usize| -> Option<u32> {
+        if i + 4 > t.len() {
+            return None;
+        }
         Some(if le {
-            u32::from_le_bytes(*t.get(i..i + 4)?)
+            u32::from_le_bytes([t[i], t[i + 1], t[i + 2], t[i + 3]])
         } else {
-            u32::from_be_bytes(*t.get(i..i + 4)?)
+            u32::from_be_bytes([t[i], t[i + 1], t[i + 2], t[i + 3]])
         })
     };
-    let ifd = g32(4)? as usize;
-    let n = g16(ifd)? as usize;
+    let ifd = match g32(4) {
+        Some(v) => v as usize,
+        None => return 1,
+    };
+    let n = match g16(ifd) {
+        Some(v) => v as usize,
+        None => return 1,
+    };
     for i in 0..n {
         let e = ifd + 2 + i * 12;
         if e + 12 > t.len() {
             break;
         }
-        if g16(e)? == 0x0112 {
-            return g16(e + 8)?.clamp(1, 8);
+        if g16(e) == Some(0x0112) {
+            if let Some(v) = g16(e + 8) {
+                return v.clamp(1, 8) as u32;
+            }
         }
     }
     1

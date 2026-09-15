@@ -51,6 +51,25 @@ jobs:
       - name: Binary selftest
         run: ./target/release/kilat selftest
 
+      # The font fixture must stay reproducible from the generator, and the reader
+      # is checked against it plus every real font the runner ships.
+      - name: Font fixtures and sfnt reader
+        run: |
+          python3 - <<'PY'
+          import filecmp, os, subprocess, tempfile
+          d = tempfile.mkdtemp()
+          subprocess.run(["python3", "scripts/make-font-fixture.py", d], check=True)
+          for f in ("kilat-mini.ttf", "kilat-mini.woff"):
+              a, b = os.path.join(d, f), os.path.join("tests/data", f)
+              assert filecmp.cmp(a, b, shallow=False), f"{f} drifted from scripts/make-font-fixture.py"
+          print("font fixtures are reproducible")
+          PY
+          ./target/release/kilat dev font-info tests/data/kilat-mini.ttf | tee /tmp/font-info.json
+          grep -q '"family": "Kilat Mini"' /tmp/font-info.json
+          grep -q '"covered": 4' /tmp/font-info.json
+          ./target/release/kilat dev font-info tests/data/kilat-mini.woff | grep -q '"units_per_em": 1000'
+          ./target/release/kilat dev fonts /usr/share/fonts
+
       - name: Codec cross-checks (python zlib / libjpeg / ImageMagick)
         run: |
           sudo apt-get update -y >/dev/null

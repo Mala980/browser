@@ -389,7 +389,6 @@ fn at_rule<'a>(css: &'a str, i: &mut usize) -> Option<(String, (&'a str, usize, 
     }
     let prelude_start = j;
     let mut depth = 0i32;
-    let mut semi = None;
     while j < b.len() {
         match b[j] {
             b'"' | b'\'' => {
@@ -401,8 +400,7 @@ fn at_rule<'a>(css: &'a str, i: &mut usize) -> Option<(String, (&'a str, usize, 
             }
             b'(' => depth += 1,
             b')' => depth -= 1,
-            b';' if depth == 0 && semi.is_none() => {
-                semi = Some(j);
+            b';' if depth == 0 => {
                 let prelude = &css[prelude_start..j];
                 *i = j + 1;
                 return Some((name, (prelude, j, j)));

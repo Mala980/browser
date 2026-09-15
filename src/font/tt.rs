@@ -458,7 +458,7 @@ impl Face {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct Names {
     family: String,
     subfamily: String,
@@ -501,7 +501,7 @@ fn names_of(n: Option<&[u8]>) -> Names {
             }
         }
     }
-    let take = |id: u16| best.remove(&id).map(|(_, t)| t).unwrap_or_default();
+    let mut take = |id: u16| best.remove(&id).map(|(_, t)| t).unwrap_or_default();
     out.family = take(1);
     out.subfamily = take(2);
     out.full_name = take(4);

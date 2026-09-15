@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  linux:
+    name: build + unit tests (x86_64 linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: kilat-${{ runner.os }}-${{ github.job }}-${{ hashFiles('Cargo.toml', 'src/**', 'build.rs') }}
+
+      # The crate has no dependencies at all, so --offline is a build-time
+      # guarantee that the same source compiles inside Termux on a phone.
+      - name: Build (release, offline)
+        run: cargo build --release --offline
+
+      - name: Build without TLS (fallback config)
+        run: cargo build --offline --no-default-features
+
+      - name: Unit tests
+        run: cargo test --offline
+
+      - name: Binary selftest
+        run: ./target/release/kilat selftest
+
+      - name: Codec cross-checks (python zlib / libjpeg / ImageMagick)
+        run: |
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y --no-install-recommends libjpeg-turbo-progs netpbm imagemagick >/dev/null
+          bash scripts/ci-codec-crosscheck.sh ./target/release/kilat
+
+      - name: Formatting (advisory)
+        continue-on-error: true
+        run: cargo fmt --all --check
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kilat-linux-x86_64
+          path: target/release/kilat
+          if-no-files-found: error
+
+  syntax:
+    name: rust syntax check (tree-sitter)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/check-rust.mjs src tests
+
+  # Re-enabled once the engine, CDP server and Termux packaging land:
+  #
+  # e2e-cdp:
+  #   uses: ./.github/workflows/e2e.yml
+  # termux-arm64:
+  #   uses: ./.github/workflows/termux.yml

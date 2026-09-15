@@ -1,0 +1,10 @@
+/target
+**/*.rs.bk
+node_modules
+dist
+.kilat-cache
+*.log
+/tmp
+third_party/quickjs/
+.arena
+.cache

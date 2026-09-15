@@ -1,0 +1,17 @@
+{
+  "name": "kilat-dev-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Developer tooling for the Kilat browser engine: local Rust syntax checking, puppeteer/go-rod E2E harnesses and fixture generation. The browser itself has no Node dependencies.",
+  "type": "module",
+  "scripts": {
+    "check:rust": "node scripts/check-rust.mjs",
+    "e2e:puppeteer": "node examples/puppeteer-smoke.mjs",
+    "e2e:all": "npm run check:rust && npm run e2e:puppeteer"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1",
+    "tree-sitter-wasms": "^0.1.12",
+    "web-tree-sitter": "^0.25.3"
+  }
+}

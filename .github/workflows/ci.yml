@@ -34,13 +34,19 @@ jobs:
       # The crate has no dependencies at all, so --offline is a build-time
       # guarantee that the same source compiles inside Termux on a phone.
       - name: Build (release, offline)
-        run: cargo build --release --offline
+        run: |
+          set -o pipefail
+          cargo build --release --offline 2>&1 | tee /tmp/build.log \
+            || { bash scripts/ci-report.sh /tmp/build.log; exit 1; }
 
       - name: Build without TLS (fallback config)
         run: cargo build --offline --no-default-features
 
       - name: Unit tests
-        run: cargo test --offline
+        run: |
+          set -o pipefail
+          cargo test --offline 2>&1 | tee /tmp/test.log \
+            || { bash scripts/ci-report.sh /tmp/test.log; exit 1; }
 
       - name: Binary selftest
         run: ./target/release/kilat selftest

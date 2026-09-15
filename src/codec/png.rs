@@ -110,6 +110,54 @@ pub fn decode(data: &[u8]) -> Result<Decoded> {
     Ok(Decoded::still(w as u32, h as u32, out))
 }
 
+fn apply_filter(ft: u8, cur: &mut [u8], prev: &[u8], bpp: usize) -> Result<()> {
+    match ft {
+        0 => Ok(()),
+        1 => {
+            for i in bpp..cur.len() {
+                let a = cur[i - bpp] as i32;
+                cur[i] = (cur[i] as i32 + a) as u8;
+            }
+            Ok(())
+        }
+        2 => {
+            for i in 0..cur.len() {
+                cur[i] = cur[i].wrapping_add(prev[i]);
+            }
+            Ok(())
+        }
+        3 => {
+            for i in 0..cur.len() {
+                let a = if i >= bpp { cur[i - bpp] as i32 } else { 0 };
+                cur[i] = (cur[i] as i32 + (a + prev[i] as i32) / 2) as u8;
+            }
+            Ok(())
+        }
+        4 => {
+            for i in 0..cur.len() {
+                let a = if i >= bpp { cur[i - bpp] as i32 } else { 0 };
+                let b = prev[i] as i32;
+                let c = if i >= bpp { prev[i - bpp] as i32 } else { 0 };
+                cur[i] = (cur[i] as i32 + paeth(a, b, c)) as u8;
+            }
+            Ok(())
+        }
+        _ => Err(format!("png: unknown filter type {ft}")),
+    }
+}
+
+fn paeth(a: i32, b: i32, c: i32) -> i32 {
+    let p = a + b - c;
+    let (pa, pb, pc) = ((p - a).abs(), (p - b).abs(), (p - c).abs());
+    if pa <= pb && pa <= pc {
+        a
+    } else if pb <= pc {
+        b
+    } else {
+        c
+    }
+}
+
 pub fn decode_into(
     raw: &[u8],
     w: usize,

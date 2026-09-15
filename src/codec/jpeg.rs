@@ -611,7 +611,7 @@ impl<'a> Jpg<'a> {
             let (p, pw, _) = &planes[0];
             for y in 0..h {
                 for x in 0..w {
-                    let v = p[y * pw + x];
+                    let v = p[y * *pw + x];
                     let o = (y * w + x) * 4;
                     rgba[o] = v;
                     rgba[o + 1] = v;
@@ -627,10 +627,10 @@ impl<'a> Jpg<'a> {
             let rgb_planes = self.ids_are_rgb();
             for y in 0..h {
                 for x in 0..w {
-                    let yy = yp[y * ypw + x] as i32;
+                    let yy = yp[y * *ypw + x] as i32;
                     let cx = (x / sx).min(cpw.saturating_sub(1));
                     let cy = (y / sy).min(cph.saturating_sub(1));
-                    let ci = cy * cpw + cx;
+                    let ci = cy * *cpw + cx;
                     let (r, g, b) = if rgb_planes {
                         (
                             yy as u8,

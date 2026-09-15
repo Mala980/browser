@@ -146,6 +146,34 @@ impl Dom {
         self.node(id).map(|n| n.tag.clone()).unwrap_or_default()
     }
 
+    /// Append text to an existing text node (the tokenizer merges runs).
+    pub fn append_text(&mut self, id: usize, text: &str) {
+        if let Some(n) = self.node_mut(id) {
+            n.data.push_str(text);
+        }
+    }
+
+    /// The root `<html>` element, if the document has been parsed.
+    pub fn html_root(&self) -> Option<usize> {
+        self.children(self.document)
+            .into_iter()
+            .find(|&n| self.tag(n) == "html")
+    }
+
+    pub fn head(&self) -> Option<usize> {
+        let html = self.html_root()?;
+        self.children(html)
+            .into_iter()
+            .find(|&n| self.tag(n) == "head")
+    }
+
+    pub fn body(&self) -> Option<usize> {
+        let html = self.html_root()?;
+        self.children(html)
+            .into_iter()
+            .find(|&n| self.tag(n) == "body")
+    }
+
     pub fn mark_dirty(&mut self) {
         self.revision += 1;
     }
@@ -383,6 +411,11 @@ impl Dom {
                 self.walk(*c, out);
             }
         }
+    }
+
+    /// The `index`-th child (`element.children[i]` in the DOM).
+    pub fn child(&self, id: usize, index: usize) -> Option<usize> {
+        self.children(id).get(index).copied()
     }
 
     pub fn children(&self, id: usize) -> Vec<usize> {

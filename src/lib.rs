@@ -31,6 +31,7 @@ pub mod codec;
 pub mod css;
 pub mod dom;
 pub mod html;
+pub mod net;
 pub mod util;
 
 /// Version string baked in by `build.rs` (cargo version + short git sha).

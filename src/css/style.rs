@@ -10,7 +10,7 @@
 use crate::css::parse::{parse_style_attribute, resolve_vars, Decl, Media, Rule, Sheet};
 use crate::css::selector::SelectorSet;
 use crate::css::value::{
-    parse_angle, parse_color, parse_float, split_top, split_top_sep, BackgroundRepeat,
+    parse_angle, parse_color, parse_float, split_top_sep, BackgroundRepeat,
     BackgroundSize, BorderStyle, Display, FlexDir, Float, ImageValue, Justify, Length, Matrix,
     Overflow, Position, Shadow, Style, TextAlign, WhiteSpace,
 };
@@ -819,7 +819,8 @@ fn parse_transform(v: &str) -> Option<Matrix> {
         .iter()
         .filter_map(|n| strip_fn(p, n).map(|args| (*n, args)))
         {
-            let args: Vec<&str> = split_top_sep(inner, ',').iter().map(|s| s.as_str()).collect();
+            let list = split_top_sep(inner, ',');
+            let args: Vec<&str> = list.iter().map(|s| s.as_str()).collect();
             let num = |i: usize| -> f32 {
                 args.get(i)
                     .and_then(|a| Length::parse(a))

@@ -6,7 +6,7 @@
 //! `scripts/ci-e2e.mjs` drives through CDP.
 
 use crate::codec::deflate;
-use std::io::{Read, Write};
+use std::io::{BufRead, Read, Write};
 
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};

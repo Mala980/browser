@@ -54,6 +54,13 @@ struct TlsProcess {
     stdout: io::BufReader<std::process::ChildStdout>,
 }
 
+fn read_raw(kind: &mut Kind, dst: &mut [u8]) -> io::Result<usize> {
+    match kind {
+        Kind::Plain(s) => s.read(dst),
+        Kind::Tls(t) => t.stdout.read(dst),
+    }
+}
+
 impl Wire {
     fn new(kind: Kind) -> Wire {
         Wire {
@@ -65,10 +72,7 @@ impl Wire {
     }
 
     fn read_raw(&mut self, dst: &mut [u8]) -> io::Result<usize> {
-        match &mut self.kind {
-            Kind::Plain(s) => s.read(dst),
-            Kind::Tls(t) => t.stdout.read(dst),
-        }
+        read_raw(&mut self.kind, dst)
     }
 
     fn buffered(&self) -> usize {
@@ -82,17 +86,22 @@ impl Wire {
         }
         self.start = 0;
         self.end = 0;
-        loop {
-            match self.read_raw(&mut self.buf) {
-                Ok(0) => return Ok(false),
+        // The buffer is moved out so `read_raw` can hold `&mut self.kind`
+        // without aliasing `self.buf`.
+        let mut local = std::mem::take(&mut self.buf);
+        let result = loop {
+            match read_raw(&mut self.kind, &mut local) {
+                Ok(0) => break Ok(false),
                 Ok(n) => {
                     self.end = n;
-                    return Ok(true);
+                    break Ok(true);
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
-                Err(e) => return Err(e),
+                Err(e) => break Err(e),
             }
-        }
+        };
+        self.buf = local;
+        result
     }
 
     /// Read a CRLF-terminated line, without the terminator (headers are small,

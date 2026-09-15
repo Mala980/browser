@@ -179,6 +179,14 @@ impl Dom {
         self.nodes.len()
     }
 
+    /// Remove every child of `id` (innerHTML replacement).
+    pub fn clear_children(&mut self, id: usize) {
+        for c in self.children(id) {
+            self.detach(c);
+        }
+        self.mark_dirty();
+    }
+
     pub fn mark_dirty(&mut self) {
         self.revision += 1;
     }

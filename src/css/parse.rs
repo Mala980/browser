@@ -722,7 +722,7 @@ pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<
         "border-radius" => {
             let parts = split_top_sep(v, '/');
             let h = split_top_sep(&parts[0], ' ');
-            let (tl, tr, br, bl) = box_sides(&h);
+            let [tl, tr, br, bl] = box_sides(&h);
             let vpart = parts.get(1).map(|s| split_top_sep(s, ' '));
             let vert = match &vpart {
                 Some(list) => {
@@ -907,7 +907,7 @@ pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<
         }
         "gap" | "grid-gap" => {
             let parts = split_top_sep(v, ' ');
-            let (r, c) = box_sides(&parts);
+            let [r, c, _, _] = box_sides(&parts);
             push(out, "row-gap", r);
             push(out, "column-gap", c);
         }

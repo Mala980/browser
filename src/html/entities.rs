@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 /// compact; `named()` wraps it so callers don't care.
 pub fn named(name: &str) -> Option<char> {
     let table = ENTITIES.get_or_init(build);
-    match table.binary_search_by(|(k, _)| k.as_str().cmp(name)) {
+    match table.binary_search_by(|(k, _)| k.cmp(name)) {
         Ok(i) => Some(table[i].1),
         Err(_) => None,
     }
@@ -133,7 +133,7 @@ fn build() -> Vec<(&'static str, char)> {
 }
 
 /// The table itself: HTML5 named references that matter for text rendering.
-const RAW: &[(&str, char)] = [
+const RAW: &[(&'static str, char)] = [
     ("AElig", '\u{c6}'),
     ("AMP", '\u{26}'),
     ("Aacute", '\u{c1}'),

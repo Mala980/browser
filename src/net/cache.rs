@@ -70,11 +70,10 @@ impl Entry {
     }
 
     pub fn stale_while_revalidate_left(&self, now: u64) -> i64 {
-        let swr = header_int(&self.headers, "cache-control", "stale-while-revalidate")
-            .or(self.cc.max_age.map(|_| 0))
+        let swr: u64 = header_int(&self.headers, "cache-control", "stale-while-revalidate")
             .unwrap_or(0);
         let deficit = self.lifetime_left(now).abs();
-        if deficit as i64 <= swr {
+        if (deficit as u64) <= swr {
             deficit
         } else {
             0

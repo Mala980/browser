@@ -176,10 +176,14 @@ impl Url {
             Some(p) if Some(p) == default_port(&scheme_l) => None,
             other => other,
         };
+        let (username, password) = match userinfo {
+            Some((u, p)) => (u, p),
+            None => (String::new(), String::new()),
+        };
         Ok(Url {
             scheme: scheme_l,
-            username: userinfo.map(|(u, _)| u).unwrap_or_default(),
-            password: userinfo.map(|(_, p)| p).unwrap_or_default(),
+            username,
+            password,
             host,
             port,
             path,
@@ -333,7 +337,7 @@ impl Url {
             .unwrap_or("text/plain")
             .to_ascii_lowercase();
         let bytes = if is_b64 {
-            crate::codec::base64::decode(payload)?
+            crate::codec::base64::decode(payload).ok()?
         } else {
             percent_decode(payload).into_bytes()
         };
@@ -622,7 +626,7 @@ mod tests {
 
     #[test]
     fn percent_and_control_chars() {
-        assert_eq!(percent_decode("a%20b%e9"), "a b\xe9");
+        assert_eq!(percent_decode("a%20b%e9"), "a b\u{e9}");
         assert_eq!(percent_decode("100%"), "100%");
         assert_eq!(percent_decode("bad%zz"), "bad%zz");
         assert_eq!(encode_query_component("a b&c=d"), "a%20b%26c%3Dd");

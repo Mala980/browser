@@ -21,6 +21,7 @@ fn env_flag(name: &str) -> bool {
 fn main() {
     let out_dir = std::env::var("OUT_DIR").unwrap_or_else(|_| ".".to_string());
     let target = std::env::var("TARGET").unwrap_or_default();
+    println!("cargo::rustc-check-cfg=cfg(kilat_no_tls)");
     println!("cargo:rerun-if-changed=third_party/quickjs");
     println!("cargo:rerun-if-changed=src/js/glue.c");
     println!("cargo:rustc-env=KILAT_TARGET={target}");

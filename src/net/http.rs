@@ -640,7 +640,8 @@ impl Client {
         }
         if let Some(p) = &self.config.proxy {
             if !p.user.is_empty() {
-                let token = crate::codec::base64::encode(&format!("{}:{}", p.user, p.password));
+                let token =
+                    crate::codec::base64::encode(format!("{}:{}", p.user, p.password).as_bytes());
                 req.push_str(&format!("Proxy-Authorization: Basic {token}\r\n"));
             }
         }
@@ -810,6 +811,7 @@ fn key_of(url: &Url) -> String {
 }
 
 fn read_file_capped(path: &str, cap: usize) -> Result<Vec<u8>> {
+    use std::io::Read;
     let meta = std::fs::metadata(path).map_err(|e| format!("file {path}: {e}"))?;
     if meta.len() as usize > cap {
         return Err(format!("file {path}: {} exceeds cap", meta.len()));

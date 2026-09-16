@@ -18,4 +18,4 @@ mkdir -p logs
 cp "$LOG" "logs/${NAME}-run${GITHUB_RUN_ID:-0}-$(date -u +%Y%m%dT%H%M%S).txt"
 git add logs >/dev/null 2>&1
 git commit -q -m "ci log: ${NAME} (run ${GITHUB_RUN_ID:-0})" >/dev/null 2>&1 || exit 0
-git push -q origin "$BRANCH" >/dev/null 2>&1 || echo "could not push diagnostics"
+git push origin "$BRANCH" 2>&1 | tail -3 || echo "could not push diagnostics"

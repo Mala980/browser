@@ -2,12 +2,13 @@ name: Termux (Android aarch64)
 
 on:
   push:
-    branches: ["**"]
+    branches-ignore: ["ci-diagnostics"]
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # needed to publish diagnostics on ci-diagnostics
+  actions: read
 
 jobs:
   ndk-cross:

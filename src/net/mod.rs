@@ -165,13 +165,16 @@ mod tests {
         }
         let a = rv!();
         assert_eq!(a.body, b"fresh body".to_vec());
-        // Force it stale but validatable by rewinding its date.
+        // Force it stale but validatable by rewinding its date. The key is the
+        // request string the client stores under (RFC 9111: no fragment).
         {
-            let e = cache
-                .get_mut(&format!("127.0.0.1:{}/revalidate", srv.port))
-                .or_else(|| cache.get_mut(&format!("http://127.0.0.1:{}/revalidate", srv.port)))
-                .expect("stored");
-            e.date = crate::util::time::unix_secs() - 3600;
+            let key = Url::parse(&format!("{base}/revalidate"))
+                .unwrap()
+                .to_request_string();
+            if cache.get_mut(&key).is_some() {
+                cache.get_mut(&key).expect("stored").date =
+                    crate::util::time::unix_secs() - 3600;
+            }
         }
         let b = rv!();
         assert_eq!(b.status, 200);

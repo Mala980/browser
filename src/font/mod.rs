@@ -10,6 +10,7 @@
 //! for the family names CSS authors use in practice, and it costs nothing at
 //! startup beyond the faces we decide to load.
 
+pub mod raster;
 pub mod tt;
 
 use crate::util::Result;

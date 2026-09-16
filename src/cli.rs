@@ -284,6 +284,48 @@ fn dev(args: &[String]) -> i32 {
                 }
             }
         }
+        "layout" => {
+            // kilat dev layout FILE.html [WIDTH] : parse, cascade, lay out, dump.
+            let path = match args.get(2) {
+                Some(p) => p.clone(),
+                None => {
+                    eprintln!("kilat dev layout <file.html> [width]");
+                    return USAGE_ERROR;
+                }
+            };
+            let src = match std::fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("kilat dev layout: {e}");
+                    return RUNTIME_ERROR;
+                }
+            };
+            let width: f32 = args
+                .get(3)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(1280.0);
+            let vp = crate::css::Viewport {
+                width,
+                height: 720.0,
+                ..Default::default()
+            };
+            let dom = crate::html::parse_html(&src);
+            let sheet = crate::css::parse_sheet("");
+            let styled = crate::css::style_tree(&dom, &sheet, vp);
+            let fonts = crate::font::FontDB::load_system();
+            let tree = crate::layout::layout_document(&dom, &styled, &fonts, &crate::layout::NoImages, vp);
+            print!("{}", tree.dump());
+            println!(
+                "content {}x{}, {} boxes, {} lines, {} runs{}",
+                tree.content_width,
+                tree.content_height,
+                tree.boxes.len(),
+                tree.total_lines(),
+                tree.total_runs(),
+                if tree.truncated { ", TRUNCATED" } else { "" }
+            );
+            OK
+        }
         "fonts" => {
             let mut db = crate::font::FontDB::new();
             if let Some(dir) = args.get(2) {

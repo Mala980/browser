@@ -420,6 +420,18 @@ impl Face {
     }
 
     /// Tight bounding box in font units, or None for empty glyphs.
+    /// Rasterise `gid` at `px` size into an alpha mask.
+    pub fn mask(&self, gid: u16, px: f32) -> Option<crate::font::raster::Mask> {
+        let contours = self.outline(gid).ok()?;
+        let bbox = self.bbox(gid)?;
+        Some(crate::font::raster::glyph_mask(
+            &contours,
+            self.advance_units(gid) as f32,
+            Some((bbox.x_min, bbox.y_min, bbox.x_max, bbox.y_max)),
+            self.scale(px),
+        ))
+    }
+
     pub fn bbox(&self, gid: u16) -> Option<Bbox> {
         let g = self.glyph_bytes(gid)?;
         let ncont = i16at(g, 0);

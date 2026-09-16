@@ -325,6 +325,12 @@ pub fn inflate_raw(src: &[u8], max_out: usize) -> Result<Vec<u8>> {
 
 /// zlib stream (RFC 1950).
 pub fn inflate_zlib(src: &[u8]) -> Result<Vec<u8>> {
+    inflate_zlib_bounded(src, limit(src.len()))
+}
+
+/// `inflate_zlib` with an explicit output ceiling, for callers that know the
+/// decoded size (PNG uses width*height*4 per frame).
+pub fn inflate_zlib_bounded(src: &[u8], max_out: usize) -> Result<Vec<u8>> {
     if src.len() < 6 {
         return Err("zlib: too short".to_string());
     }
@@ -342,8 +348,7 @@ pub fn inflate_zlib(src: &[u8]) -> Result<Vec<u8>> {
         return Err("zlib: preset dictionary unsupported".to_string());
     }
     let body_start = 2;
-    let max = limit(src.len());
-    let out = inflate_raw(&src[body_start..src.len() - 4], max)?;
+    let out = inflate_raw(&src[body_start..src.len() - 4], max_out)?;
     let want = u32::from_be_bytes([
         src[src.len() - 4],
         src[src.len() - 3],
@@ -445,10 +450,14 @@ pub fn inflate_any(src: &[u8]) -> Result<Vec<u8>> {
     inflate_raw(src, limit(src.len()))
 }
 
-/// Bomb guard: never more than 64 MiB out of one response, and at most 64x the
-/// compressed size.
+/// Default output ceiling. A ratio cap looks like the right bomb guard but it
+/// rejects legitimate content: a 2 MB page that gzips to 20 KB is 100:1, and a
+/// flat screenshot PNG does better than that. So the codec allows generously and
+/// callers that face the network enforce the real budget (`max_body_bytes`,
+/// `--budget`) on top, while `inflate_zlib_bounded` is used where the true size
+/// is already known (PNG, where IHDR says exactly how big the image is).
 fn limit(src_len: usize) -> usize {
-    let by_ratio = src_len.saturating_mul(64).max(1 << 16);
+    let by_ratio = src_len.saturating_mul(1024).max(1 << 20);
     by_ratio.min(64 * 1024 * 1024)
 }
 

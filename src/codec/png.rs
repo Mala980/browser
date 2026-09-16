@@ -95,7 +95,12 @@ pub fn decode(data: &[u8]) -> Result<Decoded> {
     if idat.is_empty() {
         return Err("png: no image data".to_string());
     }
-    let raw = inflate::inflate_zlib(&idat)
+    // IHDR tells us exactly how big the inflated stream can be, so bound it by
+    // the real pixel size instead of a ratio guess: that blocks a zlib bomb while
+    // still accepting a flat 4K screenshot that compresses 200:1.
+    let need = (info.width as usize * 4 + 1) * info.height as usize;
+    // 34 frames' worth of slack covers APNG without trusting a hostile IHDR.
+    let raw = inflate::inflate_zlib_bounded(&idat, need * 34 + 1024)
         .or_else(|_| inflate::inflate_any(&idat))
         .map_err(|e| format!("png: {e}"))?;
 

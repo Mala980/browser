@@ -153,14 +153,16 @@ pub fn layout_container(ctx: &Ctx, tree: &mut LayoutTree, idx: usize, inner: &Re
         if let Some(v) = max_main {
             main = main.min(v);
         }
+        let grows = bstyle.flex_grow.max(0.0);
+        let shrinks = bstyle.flex_shrink.max(0.0);
         items.push(Item {
             bi,
             st: bstyle,
             fr,
             main: main.max(0.0),
             basis: basis.unwrap_or(0.0),
-            grows: bstyle.flex_grow.max(0.0),
-            shrinks: bstyle.flex_shrink.max(0.0),
+            grows,
+            shrinks,
             auto_start,
             auto_end,
         });

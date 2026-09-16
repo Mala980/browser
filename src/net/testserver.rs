@@ -62,7 +62,7 @@ pub fn respond(method: &str, path: &str, headers: &[(String, String)]) -> Vec<u8
         .map(|v| v.contains("gzip"))
         .unwrap_or(false);
     let mut head = String::new();
-    let mut body: Vec<u8> = Vec::new();
+    let mut body: Vec<u8>;
     let mut chunked = false;
     let mut close = false;
     let mut extra: Vec<String> = Vec::new();

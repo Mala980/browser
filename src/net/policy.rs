@@ -187,19 +187,16 @@ impl Policy {
             return false;
         }
         let host = url.host.as_str();
-        let path = url.path.as_str();
-        let query = url.query.clone().unwrap_or_default();
+        // Lowercase the whole URL once: AdBlock path patterns are matched against
+        // the full URL (they may include the query), and doing it per rule made
+        // blocking cost O(rules) allocations on every subresource.
+        let hay = url.to_string().to_ascii_lowercase();
         let mut blocked = false;
         for p in self.blocklist.iter() {
             if !p.host.is_empty() && !host_ends_with(host, &p.host) {
                 continue;
             }
             if let Some(sub) = &p.path {
-                let hay = if query.is_empty() {
-                    url.to_string().to_ascii_lowercase()
-                } else {
-                    format!("{url}").to_ascii_lowercase()
-                };
                 if !hay.contains(sub.as_str()) {
                     continue;
                 }

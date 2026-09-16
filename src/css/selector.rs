@@ -502,6 +502,10 @@ impl<'a> SelParser<'a> {
             }
         }
         let specificity = spec(spec_id, spec_cls, spec_ty);
+        // `matches_complex` walks from the subject outwards, so store the chain
+        // right-to-left: `div > p` becomes subject `p` with a Child link to `div`.
+        parts.reverse();
+        combinators.reverse();
         Ok(Complex {
             parts,
             combinators,

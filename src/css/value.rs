@@ -146,28 +146,38 @@ pub fn split_number_unit(t: &str) -> Option<(f32, String)> {
         i += 1;
     }
     let start = i;
-    let mut dots = 0usize;
-    while i < b.len() {
-        let c = b[i];
-        if c.is_ascii_digit() {
+    while i < b.len() && b[i].is_ascii_digit() {
+        i += 1;
+    }
+    if i < b.len() && b[i] == b'.' {
+        i += 1;
+        while i < b.len() && b[i].is_ascii_digit() {
             i += 1;
-        } else if c == b'.' && dots == 0 {
-            dots += 1;
-            i += 1;
-        } else if (c == b'e' || c == b'E') && i > start {
-            // scientific notation: 1e3
-            i += 1;
-            if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
-                i += 1;
-            }
-        } else {
-            break;
         }
     }
-    if i == start {
+    // Scientific notation only when digits really follow the `e`: scanning `e`
+    // unconditionally swallowed the unit letter of `1.5em` and `2ex`, leaving
+    // "1.5e" to fail the number parse - which dropped every em-based font-size
+    // (and everything else measured in em) down to the inherited value.
+    let seen_digits = t[start..].as_bytes().iter().any(|c| c.is_ascii_digit());
+    if seen_digits && i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+        let mut j = i + 1;
+        if j < b.len() && (b[j] == b'+' || b[j] == b'-') {
+            j += 1;
+        }
+        if j < b.len() && b[j].is_ascii_digit() {
+            i = j;
+            while i < b.len() && b[i].is_ascii_digit() {
+                i += 1;
+            }
+        }
+    }
+    if !seen_digits {
         return None;
     }
-    let num: f32 = t[start..i].trim().parse().ok()?;
+    // Include the leading sign: dropping it turned every negative length
+    // (`margin: -5px`, `top: -3px`) into a positive one.
+    let num: f32 = t[..i].trim().parse().ok()?;
     if !num.is_finite() {
         return None;
     }

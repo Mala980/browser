@@ -549,7 +549,9 @@ fn parse_import(prelude: &str) -> Option<String> {
 fn selector_pseudo_elements(set: &SelectorSet) -> Vec<(String, usize)> {
     let mut out = Vec::new();
     for (idx, c) in set.complexes.iter().enumerate() {
-        if let Some(p) = c.parts.last() {
+        // `Complex::parts` is stored right-to-left (subject first), and the
+        // subject is where `::before`/`::after` live.
+        if let Some(p) = c.parts.first() {
             if let Some(el) = &p.element {
                 out.push((el.clone(), idx));
             }
@@ -579,7 +581,7 @@ fn parse_declarations(body: &str) -> Vec<Decl> {
             }
         }
         value = value.trim().to_string();
-        if value.eq_ignore_ascii_case("inherit") {
+        if value.eq_ignore_ascii_case("inherit") && longhands_of(&name).is_empty() {
             out.push(Decl::Prop {
                 name,
                 value: "inherit".to_string(),
@@ -615,7 +617,37 @@ fn split_declarations(body: &str) -> Vec<String> {
     let mut cur = String::new();
     let mut depth = 0i32;
     let mut quote: Option<char> = None;
+    let mut comment = false;
+    let mut prev = '\0';
+    // A `/` is held back one character so we can tell `/` from `/*` without
+    // writing the slash into the declaration first.
+    let mut slash = false;
     for c in body.chars() {
+        // `/* ... */` collapses to a space: leaving the markers in place glued the
+        // comment onto the following property name (`/*x*/ text-decoration`), so a
+        // declaration after a comment silently disappeared.
+        if comment {
+            if prev == '*' && c == '/' {
+                comment = false;
+                cur.push(' ');
+            }
+            prev = c;
+            continue;
+        }
+        if slash {
+            slash = false;
+            if c == '*' {
+                prev = c;
+                comment = true;
+                continue;
+            }
+            cur.push('/');
+        }
+        prev = c;
+        if c == '/' {
+            slash = true;
+            continue;
+        }
         if let Some(q) = quote {
             cur.push(c);
             if c == q {
@@ -646,6 +678,9 @@ fn split_declarations(body: &str) -> Vec<String> {
             _ => cur.push(c),
         }
     }
+    if slash {
+        cur.push('/');
+    }
     if !cur.trim().is_empty() {
         out.push(cur);
     }
@@ -661,9 +696,122 @@ fn prop(name: &str, value: &str, important: bool) -> Decl {
 }
 
 /// One entry point for all shorthand expansion.
+/// The longhands a shorthand stands for. Only needed for CSS-wide keywords:
+/// `font: inherit` has to reach every longhand `font` would set, and a list is
+/// cheaper than running the real expander with a value it cannot parse.
+pub fn longhands_of(name: &str) -> &'static [&'static str] {
+    match name {
+        "margin" => &[
+            "margin-top",
+            "margin-right",
+            "margin-bottom",
+            "margin-left",
+        ],
+        "padding" => &[
+            "padding-top",
+            "padding-right",
+            "padding-bottom",
+            "padding-left",
+        ],
+        "inset" => &["top", "right", "bottom", "left"],
+        "border" => &[
+            "border-top-width",
+            "border-top-style",
+            "border-top-color",
+            "border-right-width",
+            "border-right-style",
+            "border-right-color",
+            "border-bottom-width",
+            "border-bottom-style",
+            "border-bottom-color",
+            "border-left-width",
+            "border-left-style",
+            "border-left-color",
+        ],
+        "border-width" | "border-style" | "border-color" | "border-radius" => {
+            if name == "border-radius" {
+                &[
+                    "border-top-left-radius",
+                    "border-top-right-radius",
+                    "border-bottom-right-radius",
+                    "border-bottom-left-radius",
+                ]
+            } else {
+                match name {
+                    "border-width" => &[
+                        "border-top-width",
+                        "border-right-width",
+                        "border-bottom-width",
+                        "border-left-width",
+                    ],
+                    "border-style" => &[
+                        "border-top-style",
+                        "border-right-style",
+                        "border-bottom-style",
+                        "border-left-style",
+                    ],
+                    _ => &[
+                        "border-top-color",
+                        "border-right-color",
+                        "border-bottom-color",
+                        "border-left-color",
+                    ],
+                }
+            }
+        }
+        "background" => &[
+            "background-color",
+            "background-image",
+            "background-repeat",
+            "background-position",
+            "background-size",
+            "background-clip",
+        ],
+        "font" => &[
+            "font-style",
+            "font-variant",
+            "font-weight",
+            "font-stretch",
+            "font-size",
+            "line-height",
+            "font-family",
+        ],
+        "flex" => &["flex-grow", "flex-shrink", "flex-basis"],
+        "flex-flow" => &["flex-direction", "flex-wrap"],
+        "gap" | "grid-gap" => &["row-gap", "column-gap"],
+        "place-items" => &["align-items", "justify-items"],
+        "place-content" => &["align-content", "justify-content"],
+        "text-decoration" => &[
+            "text-decoration-line",
+            "text-decoration-style",
+            "text-decoration-color",
+        ],
+        "overflow" => &["overflow-x", "overflow-y"],
+        "outline" => &["outline-width", "outline-style", "outline-color"],
+        "list-style" => &["list-style-type", "list-style-position", "list-style-image"],
+        "columns" => &["column-width", "column-count"],
+        _ => &[],
+    }
+}
+
 pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<Decl>) {
     let v = value.trim();
     let push = |out: &mut Vec<Decl>, n: &str, val: &str| out.push(prop(n, val, important));
+    // A CSS-wide keyword on a shorthand applies to every longhand it sets.
+    if matches!(
+        v,
+        "inherit" | "initial" | "unset" | "revert" | "revert-layer"
+    ) {
+        let lh = longhands_of(name);
+        if lh.is_empty() {
+            push(out, name, v);
+        } else {
+            for n in lh {
+                push(out, n, v);
+            }
+        }
+        return;
+    }
     match name {
         "margin" | "padding" => {
             let parts = split_top_sep(v, ' ');
@@ -787,60 +935,98 @@ pub fn expand_shorthand(name: &str, value: &str, important: bool, out: &mut Vec<
             let mut repeat = None;
             let mut position = None;
             let mut origin = None;
+            // One layer wins: `Style` carries a single background. Multi-layer
+            // shorthand is legal CSS and we keep the first layer's values.
             for (idx, layer) in parts.iter().enumerate() {
-                let mut pending_bg_size: Option<String> = None;
-                for tok in split_top_sep(layer, '/') {
-                    let t = tok.trim().to_string();
+                let mut after_slash = false;
+                // Splitting on spaces at paren depth 0 keeps `url(a b.png)` and
+                // `rgba(0, 0, 0, .5)` in one piece, unlike split_whitespace.
+                for tok in split_top_sep(layer, ' ') {
+                    let t = tok.trim();
+                    if t.is_empty() {
+                        continue;
+                    }
+                    if t == "/" {
+                        after_slash = true;
+                        continue;
+                    }
+                    if after_slash {
+                        let is_size = t.eq_ignore_ascii_case("cover")
+                            || t.eq_ignore_ascii_case("contain")
+                            || t.eq_ignore_ascii_case("auto")
+                            || crate::css::value::Length::parse(t).is_some();
+                        if is_size {
+                            if size.is_none() {
+                                size = Some(t.to_string());
+                            }
+                            continue;
+                        }
+                        // Not a size (e.g. `border-box` after the second slash):
+                        // fall through to the normal classification.
+                        after_slash = false;
+                    }
                     if t.starts_with("linear-gradient")
                         || t.starts_with("radial-gradient")
                         || t.starts_with("conic-gradient")
                         || t.starts_with("repeating-linear-gradient")
+                        || t.starts_with("repeating-radial-gradient")
                         || t.starts_with("url(")
                         || t.eq_ignore_ascii_case("none")
                     {
                         if image.is_none() {
-                            image = Some(t.clone());
+                            image = Some(t.to_string());
                         }
                         continue;
                     }
-                    if t.starts_with("no-repeat") || t.starts_with("repeat") {
+                    if t.starts_with("no-repeat")
+                        || t.starts_with("repeat-x")
+                        || t.starts_with("repeat-y")
+                        || t.starts_with("repeat")
+                        || t.starts_with("space")
+                        || t.starts_with("round")
+                    {
                         if repeat.is_none() {
-                            repeat = Some(t.clone());
+                            repeat = Some(t.to_string());
                         }
                         continue;
+                    }
+                    if matches!(
+                        t,
+                        "padding-box" | "border-box" | "content-box" | "text"
+                    ) {
+                        if origin.is_none() {
+                            origin = Some(t.to_string());
+                        }
+                        continue;
+                    }
+                    if matches!(
+                        t,
+                        "fixed" | "local" | "scroll"
+                    ) {
+                        continue; // attachment: we always paint relative to the box
                     }
                     if t.starts_with("center")
                         || t.starts_with("top")
                         || t.starts_with("bottom")
                         || t.starts_with("left")
                         || t.starts_with("right")
-                        || crate::css::value::Length::parse(&t).is_some()
+                        || crate::css::value::Length::parse(t).is_some()
                     {
                         if position.is_none() {
-                            position = Some(t.clone());
-                        }
-                        continue;
-                    }
-                    if t.starts_with("cover") || t.starts_with("contain") {
-                        if size.is_none() {
-                            size = Some(t.clone());
-                        }
-                        continue;
-                    }
-                    if matches!(
-                        t.as_str(),
-                        "padding-box" | "border-box" | "content-box" | "text"
-                    ) {
-                        if origin.is_none() {
-                            origin = Some(t.clone());
+                            position = Some(t.to_string());
+                        } else {
+                            // Two keywords make one position: `left top`.
+                            if let Some(p) = position.as_mut() {
+                                p.push(' ');
+                                p.push_str(t);
+                            }
                         }
                         continue;
                     }
                     if color.is_none() && idx == 0 {
-                        color = Some(t.clone());
+                        color = Some(t.to_string());
                     }
                 }
-                let _ = &mut pending_bg_size;
             }
             if let Some(c) = color {
                 push(out, "background-color", &c);
@@ -1156,7 +1342,7 @@ mod tests {
         let get = |n: &str| d.iter().find(|x| x.name() == n).map(|x| x.value().to_string());
         assert_eq!(get("margin-top").as_deref(), Some("1px"));
         assert_eq!(get("margin-right").as_deref(), Some("2px"));
-        assert_eq!(get("margin-bottom").as_deref(), Some("1px"));
+        assert_eq!(get("margin-bottom").as_deref(), Some("3px"));
         assert_eq!(get("margin-left").as_deref(), Some("2px"));
     }
 

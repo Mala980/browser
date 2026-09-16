@@ -75,5 +75,32 @@ if first:
 tf = re.search(r"(?m)^failures:$", text)
 if tf:
     print("::error title=test failures::" + esc(text[tf.start():tf.start() + 3000]))
+
+# ...but the interesting part is each failing test's stdout block, which appears
+# before the summary, and the panic lines with the two lines under them (that is
+# where the assertion message lives).
+blocks = re.findall(r"(?m)^---- (.+?) stdout ----\n(.*?)(?=^---- |^failures:|\Z)", text, re.S)
+if blocks:
+    parts = []
+    for name, body in blocks[:10]:
+        body = body.strip().replace("test panicked: ", "")
+        parts.append(f"---- {name} ----\n{body[:700]}")
+    print("::error title=test panic details::" + esc("\n".join(parts)))
+
+lines = text.splitlines()
+pans = []
+for k, l in enumerate(lines):
+    if "panicked at" in l:
+        chunk = [x.strip() for x in lines[k:k + 3]]
+        pans.append(" ".join(chunk)[:300])
+if pans:
+    print("::error title=panic lines::" + esc("\n".join(pans[:30])))
+
+# Test binaries that died before running (link/compile of the test harness).
+for sig in ("error: test failed", "error: process didn't exit successfully", "signal:"):
+    idx = text.find(sig)
+    if idx >= 0:
+        print(f"::error title=harness note::" + esc(text[idx:idx + 400]))
+        break
 sys.exit(1)
 PY

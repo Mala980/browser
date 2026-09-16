@@ -21,14 +21,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: build
-        run: make -j$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
+        run: |
+          set -o pipefail
+          make -j$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) 2>&1 | tee /tmp/build.log
       - name: unit tests
         run: |
           set -o pipefail
+          make -j$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) build/astra-test 2>&1 | tee -a /tmp/build.log
           ./build/astra-test 2>&1 | tee /tmp/unit.log
       - name: publish diagnostics
         if: failure()
-        run: bash .github/publish-log.sh "unit-${{ matrix.os }}" /tmp/unit.log
+        run: |
+          cat /tmp/build.log >> /tmp/unit.log 2>/dev/null || true
+          bash .github/publish-log.sh "unit-${{ matrix.os }}" /tmp/unit.log
       - name: version smoke test
         run: ./build/astra version && ./build/astra info
       - uses: actions/upload-artifact@v4

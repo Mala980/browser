@@ -113,7 +113,8 @@ static int push(char **argv, int *n, int cap, const char *fmt, ...) {
     return 0;
 }
 
-int engine_launch(const astra_config *cfg, engine_t *eng) {
+static int engine_launch_once(const astra_config *cfg, engine_t *eng, int force_no_sandbox,
+                              int force_disable_gpu) {
     memset(eng, 0, sizeof(*eng));
     eng->pid = -1;
 
@@ -172,6 +173,8 @@ int engine_launch(const astra_config *cfg, engine_t *eng) {
     const char *prefix = getenv("PREFIX");
     int on_android = prefix || access("/system/bin/app_process", F_OK) == 0;
     if (on_android) no_sandbox = 1;
+    if (force_no_sandbox) no_sandbox = 1;
+    int use_gpu = cfg->gpu && !force_disable_gpu;
 
     char *argv[96];
     int n = 0;
@@ -201,7 +204,7 @@ int engine_launch(const astra_config *cfg, engine_t *eng) {
     push(argv, &n, 96, "--force-device-scale-factor=1");
     push(argv, &n, 96, "--hide-scrollbars");
     push(argv, &n, 96, "--mute-audio");
-    if (cfg->gpu) {
+    if (use_gpu) {
         /* compositor tuning for smoother scrolling / animation */
         push(argv, &n, 96, "--enable-gpu-rasterization");
         push(argv, &n, 96, "--ignore-gpu-blocklist");
@@ -304,6 +307,21 @@ int engine_launch(const astra_config *cfg, engine_t *eng) {
         LOGI("engine ready: %s on port %d (%s)", eng->browser, port, eng->ws_url);
     }
     return 0;
+}
+
+int engine_launch(const astra_config *cfg, engine_t *eng) {
+    int rc = engine_launch_once(cfg, eng, 0, 0);
+    if (rc != 0 && !cfg->engine_url[0]) {
+        /* Containers, Android and locked down kernels often cannot use the
+         * Chromium sandbox - retry instead of failing the whole session. */
+        LOGW("engine failed to start, retrying with --no-sandbox");
+        rc = engine_launch_once(cfg, eng, 1, 0);
+    }
+    if (rc != 0 && !cfg->engine_url[0] && cfg->gpu) {
+        LOGW("still failing, retrying with --no-sandbox --disable-gpu");
+        rc = engine_launch_once(cfg, eng, 1, 1);
+    }
+    return rc;
 }
 
 void engine_stop(engine_t *eng) {

@@ -860,14 +860,20 @@ mod tests {
 
     #[test]
     fn huffman_table_matches_counts() {
-        // The all-8-bit toy alphabet: 256 symbols, one code each of length 8.
+        // A table with 16 symbols at length 8 (the baseline maximum per length):
+        // codes 0..16, and the next length starts at double the top code.
         let mut counts = [0u8; 16];
-        counts[7] = 256;
-        let vals: Vec<u8> = (0..256u16).map(|v| v as u8).collect();
+        counts[7] = 16;
+        let vals: Vec<u8> = (0..16u16).map(|v| v as u8).collect();
         let h = Huff::build(&counts, &vals);
         assert_eq!(h.first_code[8], 0);
-        assert_eq!(h.first_code[9], 512);
+        assert_eq!(h.first_code[9], 32);
         assert!(h.usable());
+        // An over-full length must not panic; it just cannot be used.
+        let mut bad = [0u8; 16];
+        bad[0] = 200;
+        bad[1] = 200;
+        let _ = Huff::build(&bad, &[0u8; 4]);
     }
 
     fn fixture_dir() -> std::path::PathBuf {

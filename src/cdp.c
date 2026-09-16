@@ -16,6 +16,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0 /* macOS / BSD: SIGPIPE is ignored instead (install_signals) */
+#endif
+
 #define MAX_CHUNK (256 * 1024)
 
 typedef enum { CONN_CLIENT = 0, CONN_ENGINE = 1 } conn_kind_t;

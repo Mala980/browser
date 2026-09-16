@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: ["**"]
+    branches-ignore: ["ci-diagnostics"]
   pull_request:
   workflow_dispatch:
 
@@ -22,7 +23,12 @@ jobs:
       - name: build
         run: make -j$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
       - name: unit tests
-        run: ./build/astra-test
+        run: |
+          set -o pipefail
+          ./build/astra-test 2>&1 | tee /tmp/unit.log
+      - name: publish diagnostics
+        if: failure()
+        run: bash .github/publish-log.sh "unit-${{ matrix.os }}" /tmp/unit.log
       - name: version smoke test
         run: ./build/astra version && ./build/astra info
       - uses: actions/upload-artifact@v4
@@ -41,7 +47,12 @@ jobs:
       - name: build
         run: make -j$(nproc)
       - name: end-to-end test against the mock CDP engine
-        run: python3 tests/e2e/test_local.py
+        run: |
+          set -o pipefail
+          python3 tests/e2e/test_local.py 2>&1 | tee /tmp/mock.log
+      - name: publish diagnostics
+        if: failure()
+        run: bash .github/publish-log.sh mock-e2e /tmp/mock.log
 
   real-browser:
     name: real Chromium end-to-end (puppeteer + go-rod)
@@ -73,7 +84,16 @@ jobs:
       - name: build astra
         run: make -j$(nproc)
       - name: run end-to-end suite
-        run: bash tests/e2e/run_real_browser_tests.sh
+        run: |
+          set -o pipefail
+          bash tests/e2e/run_real_browser_tests.sh 2>&1 | tee /tmp/e2e.log
+      - name: publish diagnostics
+        if: failure()
+        run: |
+          { echo "== astra headless =="; cat /tmp/astra-e2e/astra-headless.log 2>/dev/null;
+            echo "== astra full =="; cat /tmp/astra-e2e/astra-full.log 2>/dev/null;
+            echo "== site =="; cat /tmp/astra-e2e/site.log 2>/dev/null; } >> /tmp/e2e.log
+          bash .github/publish-log.sh real-browser-e2e /tmp/e2e.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

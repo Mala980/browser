@@ -21,7 +21,13 @@ jobs:
           ndk-version: r26d
           add-to-path: true
       - name: build astra for aarch64-linux-android (Termux bionic)
-        run: bash scripts/build-termux-ndk.sh
+        id: ndkbuild
+        run: |
+          set -o pipefail
+          bash scripts/build-termux-ndk.sh 2>&1 | tee /tmp/ndk.log
+      - name: publish diagnostics
+        if: failure()
+        run: bash .github/publish-log.sh termux-ndk /tmp/ndk.log
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
       - name: inspect the binary
@@ -48,6 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: build in the Termux docker image
+        id: termuxbuild
         run: |
           docker run --rm -v "$PWD":/src -w /src \
             ghcr.io/termux/termux-docker:latest bash -c \

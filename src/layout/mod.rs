@@ -476,7 +476,7 @@ mod tests {
     #[test]
     fn inline_text_wraps_inside_the_content_width() {
         let filler = "alpha beta gamma delta epsilon zeta eta theta iota kappa ";
-        let html = format!("<body style='margin:0'><p>{f}</p></body>");
+        let html = format!("<body style='margin:0'><p>{filler}</p></body>");
         let (t, d) = laid_out(&html, "", 120.0);
         let p = first_box_of_tag(&t, &d, "p").expect("p box");
         assert!(p.lines.len() > 3, "expected wrapping, got {:?}", p.lines.len());
@@ -570,7 +570,7 @@ mod tests {
         assert_eq!(t.hit_test(15.0, 15.0), Some(bi).filter(|_| true).or(Some(bi)));
         let j = t.box_model(bi);
         let content = j.get("content").expect("content quad");
-        assert_eq!(content.as_arr().map(|v| v.len()), Some(8));
+        assert_eq!(content.as_array().map(|v| v.len()), Some(8));
         let dump = t.dump();
         assert!(dump.contains("<div"));
     }

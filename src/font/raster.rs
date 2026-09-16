@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn empty_glyph_is_a_zero_mask_with_an_advance() {
-        let m = glyph_mask(&[], 250.0, 0.0, None, 0.02);
+        let m = glyph_mask(&[], 250.0, None, 0.02);
         assert_eq!(m.w, 0);
         assert_eq!(m.h, 0);
         assert!((m.advance - 5.0).abs() < 0.01);

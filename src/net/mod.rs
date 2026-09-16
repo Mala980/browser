@@ -150,18 +150,20 @@ mod tests {
         assert_eq!(red.url.path, "/text".to_string());
 
         // Conditional request: first fills the cache, second revalidates to 304.
-        let rv = || {
-            client
-                .fetch(
-                    &Url::parse(&format!("{base}/revalidate")).unwrap(),
-                    ResourceKind::Document,
-                    &mut policy,
-                    &mut cache,
-                    &stats,
-                )
-                .expect("revalidate")
-        };
-        let a = rv();
+        macro_rules! rv {
+            () => {
+                client
+                    .fetch(
+                        &Url::parse(&format!("{base}/revalidate")).unwrap(),
+                        ResourceKind::Document,
+                        &mut policy,
+                        &mut cache,
+                        &stats,
+                    )
+                    .expect("revalidate")
+            };
+        }
+        let a = rv!();
         assert_eq!(a.body, b"fresh body".to_vec());
         // Force it stale but validatable by rewinding its date.
         {
@@ -171,7 +173,7 @@ mod tests {
                 .expect("stored");
             e.date = crate::util::time::unix_secs() - 3600;
         }
-        let b = rv();
+        let b = rv!();
         assert_eq!(b.status, 200);
         assert_eq!(b.body, b"fresh body".to_vec());
         assert!(

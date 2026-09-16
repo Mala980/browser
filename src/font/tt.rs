@@ -656,13 +656,14 @@ fn hmtx_of(h: Option<&[u8]>, num_hmetrics: usize, n: usize) -> (Vec<u16>, Vec<i1
         None => return (adv, lsb),
     };
     let mut r = Rd::at(h, 0);
-    let mut last = 0u16;
     let nhm = num_hmetrics.clamp(1, n);
+    // Glyphs past numberOfHMetrics repeat the last advance width.
+    let mut last = 0u16;
     for i in 0..n {
         if i < nhm {
             last = r.u16();
-            adv[i] = last;
         }
+        adv[i] = last;
         lsb[i] = r.i16();
     }
     (adv, lsb)

@@ -801,7 +801,7 @@ mod tests {
             vec!["url(a b.png)", "no-repeat"]
         );
         assert_eq!(
-            split_top_sep("linear-gradient(0deg, red, blue)", ","),
+            split_top_sep("linear-gradient(0deg, red, blue)", ','),
             vec!["linear-gradient(0deg", "red", "blue)"]
         );
         assert_eq!(

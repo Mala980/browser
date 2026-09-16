@@ -821,8 +821,10 @@ mod tests {
         d.append(body, ul);
         d.append(ul, li1);
         d.append(ul, li2);
-        d.append(p1, d.create_text("one"));
-        d.append(p2, d.create_text("two"));
+        let t1 = d.create_text("one");
+        let t2 = d.create_text("two");
+        d.append(p1, t1);
+        d.append(p2, t2);
         d.set_attr(div, "id", "main");
         d.set_attr(div, "class", "card wide");
         d.set_attr(p2, "class", "sel");

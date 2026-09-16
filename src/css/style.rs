@@ -934,7 +934,7 @@ fn parse_content(v: &str) -> Content {
     let mut runs = Vec::new();
     let mut chars = t.chars().peekable();
     let mut pending = String::new();
-    let mut flush = |pending: &mut String, runs: &mut Vec<ContentRun>| {
+    let flush = |pending: &mut String, runs: &mut Vec<ContentRun>| {
         let s = pending.trim();
         if !s.is_empty() {
             for tok in split_top_sep(s, ' ') {

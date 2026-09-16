@@ -1,0 +1,4 @@
+cross compiling astra 0.1.0 (aarch64-linux-android24) with the NDK
+static link failed, falling back to dynamic
+ld.lld: error: unable to find library -lpthread
+clang: error: linker command failed with exit code 1 (use -v to see invocation)

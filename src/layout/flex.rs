@@ -342,7 +342,7 @@ pub fn layout_container(ctx: &Ctx, tree: &mut LayoutTree, idx: usize, inner: &Re
         let _ = pos;
         for &i in order.iter() {
             let it = &items[i];
-            let outer_main = it.main + frame(main_is_x, it.fr);
+            let outer_main = it.main + frame(main_is_x, &it.fr);
             let cross = it.border_cross(tree, main_is_x)
                 + if main_is_x {
                     it.fr.margin[edge::TOP] + it.fr.margin[edge::BOTTOM]

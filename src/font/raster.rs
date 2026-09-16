@@ -104,7 +104,8 @@ fn flatten(contours: &[Contour], scale: f32, ox: f32, oy: f32, out: &mut Vec<Vec
                     i + 1,
                 )
             };
-            curve(poly, *poly.last().unwrap_or(&(0.0, 0.0)), dev(&ctrl), dev(&end), 0.25, 0);
+            let from = *poly.last().unwrap_or(&(0.0, 0.0));
+            curve(&mut poly, from, dev(&ctrl), dev(&end), 0.25, 0);
             if next >= m {
                 break;
             }

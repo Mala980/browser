@@ -307,9 +307,6 @@ pub fn layout_document(
         .iter()
         .map(|b| b.margin_box.right())
         .fold(vp.width, f32::max);
-    // `position: fixed` boxes are viewport-anchored, so their y offset has to be
-    // corrected for the final page height before painting.
-    block::place_fixed(&ctx, &mut tree);
     tree
 }
 
@@ -353,7 +350,11 @@ pub fn replaced_size(ctx: &Ctx, id: usize, st: &Style, available: f32) -> (f32, 
         // Form controls get a height from the font metrics so they look right at
         // any font-size, and a sensible default width.
         let (a, d) = ctx.line_metrics(st, ctx.face(st));
-        h = h.max(a + d + 2.0 * (st.padding[edge::TOP] + st.padding[edge::BOTTOM]));
+        h = h.max(
+            a + d
+                + 2.0 * (ctx.len(&st.padding[edge::TOP], 1.0, st)
+                    + ctx.len(&st.padding[edge::BOTTOM], 1.0, st)),
+        );
         if tag == "textarea" {
             h = h.max(2.0 * (a + d));
         }

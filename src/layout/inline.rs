@@ -132,8 +132,8 @@ pub fn measure(ctx: &Ctx, id: usize, st: &Style) -> Widths {
                 }
                 if let Some(w) = ctx.opt_len(&cst.width, 1.0, &cst) {
                     // A fixed width is what it contributes, exactly.
-                    let extra = cst.padding[edge::LEFT]
-                        + cst.padding[edge::RIGHT]
+                    let extra = ctx.len(&cst.padding[edge::LEFT], 1.0, &cst)
+                        + ctx.len(&cst.padding[edge::RIGHT], 1.0, &cst)
                         + cst.border_width[edge::LEFT]
                         + cst.border_width[edge::RIGHT];
                     out.max += w + extra;
@@ -141,8 +141,8 @@ pub fn measure(ctx: &Ctx, id: usize, st: &Style) -> Widths {
                     continue;
                 }
                 let inner = measure(ctx, k, &cst);
-                let extra = cst.padding[edge::LEFT]
-                    + cst.padding[edge::RIGHT]
+                let extra = ctx.len(&cst.padding[edge::LEFT], 1.0, &cst)
+                    + ctx.len(&cst.padding[edge::RIGHT], 1.0, &cst)
                     + ctx.len(&cst.margin[edge::LEFT], 1.0, &cst)
                     + ctx.len(&cst.margin[edge::RIGHT], 1.0, &cst);
                 if cst.display == Display::Inline || cst.display == Display::Contents {
@@ -684,9 +684,11 @@ fn push_words(ctx: &Ctx, text: &str, st: &Style, si: usize, node: usize, frags: 
             continue;
         }
         let trimmed = w.trim_end();
-        let space_n = w.chars().count() - trimmed.chars().count();
+        let tchars = trimmed.chars().count();
+        let tlen = trimmed.len();
+        let space_n = w.chars().count() - tchars;
         let ww = ctx.fonts.measure(face, trimmed, st.font_size, true)
-            + st.letter_spacing * trimmed.chars().count() as f32;
+            + st.letter_spacing * tchars as f32;
         let sp = if space_n > 0 {
             (ctx.fonts.measure(face, " ", st.font_size, false) + st.word_spacing) * space_n as f32
         } else {
@@ -699,7 +701,7 @@ fn push_words(ctx: &Ctx, text: &str, st: &Style, si: usize, node: usize, frags: 
             space: sp,
             node,
             start,
-            end: start + trimmed.len(),
+            end: start + tlen,
             si,
             hard_break: false,
             atom: None,

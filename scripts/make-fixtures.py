@@ -58,8 +58,10 @@ def main():
     }
     for name, raw in payloads.items():
         total += write(outdir, f"{name}.bin", raw)
-        total += write(outdir, f"{name}.gz", zlib.compressobj(9, zlib.DEFLATED, 31).compress(raw)
-                       + zlib.compressobj(9, zlib.DEFLATED, 31).flush())
+        # One compressor object for compress()+flush(): a second instance starts a
+        # brand new stream, and the result is not a valid single gzip member.
+        gzc = zlib.compressobj(9, zlib.DEFLATED, 31)
+        total += write(outdir, f"{name}.gz", gzc.compress(raw) + gzc.flush())
         z = zlib.compressobj(9, zlib.DEFLATED, 15)
         total += write(outdir, f"{name}.zz", z.compress(raw) + z.flush())
         # Stored (uncompressed) blocks: exercises BTYPE=00 parsing.

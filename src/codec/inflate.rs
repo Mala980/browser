@@ -429,8 +429,18 @@ pub fn inflate_any(src: &[u8]) -> Result<Vec<u8>> {
     if src.len() >= 2 && src[0] == 0x1f && src[1] == 0x8b {
         return gunzip(src);
     }
-    if src.len() >= 2 && src[0] == 0x78 && ((src[0] as u16) << 8 | src[1] as u16) % 31 == 0 {
-        return inflate_zlib(src);
+    if src.len() >= 2 && src[0] == 0x78 {
+        if ((src[0] as u16) << 8 | src[1] as u16) % 31 == 0 {
+            return inflate_zlib(src);
+        }
+        // A 0x78 first byte with a broken check field is a zlib stream with a
+        // mangled header (seen from PHP's zlib.output_compression); strip the
+        // wrapper and the adler and try the payload before giving up.
+        if src.len() > 8 {
+            if let Ok(v) = inflate_raw(&src[2..src.len() - 4], limit(src.len())) {
+                return Ok(v);
+            }
+        }
     }
     inflate_raw(src, limit(src.len()))
 }

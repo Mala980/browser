@@ -440,10 +440,12 @@ pub fn encode_with(width: u32, height: u32, rgba: &[u8], dpi: f32, level: u32) -
 fn zlib_deflate(raw: &[u8], level: u32) -> Vec<u8> {
     let mut out = Vec::with_capacity(raw.len() / 2 + 16);
     out.push(0x78);
+    // FLG must make (CMF<<8|FLG) a multiple of 31; with CMF=0x78 the legal values
+    // are 1, 0x20, 0x5e, 0x7d, 0x9c, 0xbb, 0xda, 0xf9 - the FLEVEL pick below.
     out.push(if level == 0 {
         0x01
     } else if level < 5 {
-        0x5c
+        0x5e
     } else if level < 9 {
         0x9c
     } else {

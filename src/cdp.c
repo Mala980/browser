@@ -704,7 +704,6 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
         const char *engine_sid = json_get_str(params, "sessionId", NULL);
         json_t *ti = json_get(params, "targetInfo");
         const char *tid = ti ? json_get_str(ti, "targetId", NULL) : NULL;
-        const char *ttype = ti ? json_get_str(ti, "type", NULL) : NULL;
         conn_t *owner = tid ? attach_req_take(tid) : NULL;
         if (!owner) {
             for (conn_t *cc = S.clients; cc; cc = cc->next)

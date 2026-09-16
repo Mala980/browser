@@ -1,0 +1,13 @@
+Third party code
+================
+
+vendor/stb/stb_image.h, vendor/stb/stb_image_write.h, vendor/stb/stb_image_resize2.h
+  From https://github.com/nothings/stb by Sean Barrett and contributors.
+  Public domain (Unlicense) / MIT, at your option. See vendor/stb/LICENSE.
+
+Design references (code is NOT copied from these projects, they informed the
+architecture and the flag tuning):
+  * Servo        - https://github.com/servo/servo            (parallel layout / engine design)
+  * Lightpanda   - https://github.com/lightpanda-io/browser  (Zig headless browser, CDP-first design)
+  * Chromium     - https://chromium.googlesource.com/chromium/src (DevTools Protocol, engine flags)
+  * termux/termux-packages - https://github.com/termux/termux-packages (Android/Termux packaging)

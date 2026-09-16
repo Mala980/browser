@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Astra test page</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; background: #f6f6f6; }
+  h1 { color: #123; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  img { border: 1px solid #ccc; }
+  video { width: 480px; background: #000; }
+</style>
+</head>
+<body>
+  <h1 id="title">Astra end-to-end test page</h1>
+  <p id="sum">waiting</p>
+  <div class="row">
+    <img id="img1" src="assets/photo-1.png" width="320">
+    <img id="img2" src="assets/photo-2.png" width="320">
+    <img id="img3" src="assets/photo-3.png" width="320">
+  </div>
+  <video id="vid" muted autoplay playsinline>
+    <source src="assets/clip.webm" type="video/webm">
+  </video>
+  <script>
+    // simple work to keep the page busy for a moment (rendering smoothness probe)
+    function sumTo(n) { let s = 0; for (let i = 0; i < n; i++) s += i; return s; }
+    document.getElementById('sum').textContent = 'sum=' + sumTo(1000000);
+  </script>
+</body>
+</html>

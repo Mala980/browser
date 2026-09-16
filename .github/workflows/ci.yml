@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-unit:
+    name: build + unit tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: make -j$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
+      - name: unit tests
+        run: ./build/astra-test
+      - name: version smoke test
+        run: ./build/astra version && ./build/astra info
+      - uses: actions/upload-artifact@v4
+        with:
+          name: astra-${{ matrix.os }}
+          path: build/astra
+
+  integration-mock:
+    name: control plane integration (mock engine)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: build
+        run: make -j$(nproc)
+      - name: end-to-end test against the mock CDP engine
+        run: python3 tests/e2e/test_local.py
+
+  real-browser:
+    name: real Chromium end-to-end (puppeteer + go-rod)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: install system libraries for Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg xvfb curl python3-pip
+          sudo apt-get install -y \
+            libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+            libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 \
+            libcairo2 libatspi2.0-0 libxshmfence1 libasound2 || \
+          sudo apt-get install -y \
+            libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+            libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 \
+            libcairo2 libatspi2.0-0 libxshmfence1 libasound2t64
+      - name: pillow (test asset generation)
+        run: pip install --break-system-packages pillow || pip install pillow
+      - name: install Chrome for Testing
+        run: npx --yes @puppeteer/browsers install chrome@stable --path "$HOME/.cache/puppeteer"
+      - name: build astra
+        run: make -j$(nproc)
+      - name: run end-to-end suite
+        run: bash tests/e2e/run_real_browser_tests.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-artifacts
+          path: /tmp/astra-e2e

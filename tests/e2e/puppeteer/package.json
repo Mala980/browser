@@ -1,0 +1,13 @@
+{
+  "name": "astra-puppeteer-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Puppeteer end-to-end tests for the Astra browser control plane",
+  "scripts": {
+    "test": "node test.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

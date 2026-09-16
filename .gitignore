@@ -1,0 +1,8 @@
+build/
+dist/
+node_modules/
+tests/e2e/site/assets/
+*.o
+*.deb
+*.tar.xz
+.astra-cache/

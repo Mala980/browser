@@ -1,0 +1,67 @@
+name: Termux (Android aarch64)
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ndk-cross:
+    name: cross compile with the Android NDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+          add-to-path: true
+      - name: build astra for aarch64-linux-android (Termux bionic)
+        run: bash scripts/build-termux-ndk.sh
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      - name: inspect the binary
+        run: |
+          file dist/astra || true
+          ls -lh dist
+      - name: smoke test under qemu-user (best effort)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-user-static
+          qemu-aarch64-static dist/astra version || \
+            qemu-aarch64-static -L /dev/null dist/astra version || \
+            echo "qemu smoke test not possible for this binary (bionic)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: astra-termux-aarch64
+          path: dist/*
+
+  termux-native:
+    name: native build inside Termux (best effort)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: build in the Termux docker image
+        run: |
+          docker run --rm -v "$PWD":/src -w /src \
+            ghcr.io/termux/termux-docker:latest bash -c \
+            "pkg update -y >/dev/null && pkg install -y clang make >/dev/null && bash scripts/build-termux.sh" \
+            || docker run --rm -v "$PWD":/src -w /src \
+            termux/termux-docker:latest bash -c \
+            "pkg update -y >/dev/null && pkg install -y clang make >/dev/null && bash scripts/build-termux.sh"
+      - name: run the unit tests inside Termux
+        run: |
+          docker run --rm -v "$PWD":/src -w /src \
+            ghcr.io/termux/termux-docker:latest bash -c "./build/astra-test && ./build/astra version" \
+            || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: astra-termux-native
+          path: dist/*

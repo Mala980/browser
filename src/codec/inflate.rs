@@ -336,13 +336,12 @@ pub fn inflate_zlib(src: &[u8]) -> Result<Vec<u8>> {
     if ((cmf as u16) << 8 | flg as u16) % 31 != 0 {
         return Err("zlib: header check failed".to_string());
     }
+    // FDICT is bit 5 of FLG (RFC 1950 has no flag at 0x04 - that bit belongs to
+    // the 5-bit FCHECK); a preset dictionary would need a 4-byte DICTID here.
     if flg & 0x20 != 0 {
         return Err("zlib: preset dictionary unsupported".to_string());
     }
-    let mut body_start = 2;
-    if flg & 0x04 != 0 {
-        body_start += 4;
-    }
+    let body_start = 2;
     let max = limit(src.len());
     let out = inflate_raw(&src[body_start..src.len() - 4], max)?;
     let want = u32::from_be_bytes([

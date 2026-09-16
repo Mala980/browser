@@ -854,7 +854,10 @@ mod tests {
             seen[*v] = true;
         }
         assert!(seen.iter().all(|s| *s));
-        assert_eq!(NATURAL[1], 8);
+        // NATURAL[zigzag position] = raster index: 0, 1, 8, 16, 9, 2 ...
+        assert_eq!(NATURAL[2], 8);
+        assert_eq!(NATURAL[3], 16);
+        assert_eq!(NATURAL[5], 2);
         assert_eq!(NATURAL[63], 63);
     }
 
@@ -906,7 +909,31 @@ mod tests {
         // Different IDCT/upsampling implementations differ by a few levels; more
         // than that means the decode is genuinely wrong.
         let diff = mean_abs_diff(&d.rgba, &want);
-        assert!(diff < 6.0, "mean abs diff vs reference decode = {diff}");
+        if diff >= 6.0 {
+            // Print a coarse profile so the failure says *what kind* of mismatch it
+            // is: a constant offset means colour/level bias, block-structured means
+            // upsampling or zigzag, and per-channel means chroma.
+            let mut prof = String::new();
+            for by in 0..4usize {
+                for bx in 0..4usize {
+                    let mut acc = 0u64;
+                    let mut cnt = 0u64;
+                    for y in (by * 12)..((by + 1) * 12).min(48) {
+                        for x in (bx * 16)..((bx + 1) * 16).min(64) {
+                            let i = (y * 64 + x) * 4;
+                            for c in 0..3usize {
+                                acc += (d.rgba[i + c] as i32 - want[i + c] as i32)
+                                    .unsigned_abs() as u64;
+                                cnt += 1;
+                            }
+                        }
+                    }
+                    prof.push_str(&format!("{} ", acc as f64 / cnt.max(1) as f64));
+                }
+                prof.push('\n');
+            }
+            panic!("mean abs diff vs reference decode = {diff}\n{prof}");
+        }
         // A gradient must be monotonic-ish: left dark, right light.
         let left = d.rgba[0] as i32;
         let right = d.rgba[(48 * 64 - 1) * 4] as i32;

@@ -87,18 +87,20 @@ pub fn decode(data: &[u8]) -> Result<Decoded> {
             }
             0x2c => {
                 // Image descriptor
-                if pos + 10 > data.len() {
+                // 0x2C then left, top, width, height (u16 LE) and a flags byte:
+                // ten bytes, so the fields start at pos+1, not pos+3.
+                if pos + 11 > data.len() {
                     return Err("gif: truncated image descriptor".to_string());
                 }
-                let lx = u16::from_le_bytes([data[pos + 3], data[pos + 4]]) as usize;
-                let ly = u16::from_le_bytes([data[pos + 5], data[pos + 6]]) as usize;
-                let lw = u16::from_le_bytes([data[pos + 7], data[pos + 8]]) as usize;
-                let lh = u16::from_le_bytes([data[pos + 9], data[pos + 10]]) as usize;
-                let flags = data[pos + 11];
+                let lx = u16::from_le_bytes([data[pos + 1], data[pos + 2]]) as usize;
+                let ly = u16::from_le_bytes([data[pos + 3], data[pos + 4]]) as usize;
+                let lw = u16::from_le_bytes([data[pos + 5], data[pos + 6]]) as usize;
+                let lh = u16::from_le_bytes([data[pos + 7], data[pos + 8]]) as usize;
+                let flags = data[pos + 9];
                 let has_local = (flags & 0x80) != 0;
                 let interlaced = (flags & 0x40) != 0;
                 let local_bits = 2usize << (flags & 7);
-                let mut p = pos + 12;
+                let mut p = pos + 10;
                 let mut pal = palette.clone();
                 if has_local {
                     let end = (p + local_bits * 3).min(data.len());
@@ -355,10 +357,10 @@ mod tests {
         d.extend_from_slice(b"GIF87a");
         d.extend_from_slice(&2u16.to_le_bytes());
         d.extend_from_slice(&2u16.to_le_bytes());
-        d.push(0x80 | 0x01); // GCT, 2 entries (bits=0 -> 2 colours)
+        d.push(0x80 | 0x01); // GCT present, 1 << (1+1) = 4 entries
         d.push(0);
         d.push(0);
-        d.extend_from_slice(&[0, 0, 0, 255, 255, 255]);
+        d.extend_from_slice(&[0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 255]);
         d.push(0x2c);
         d.extend_from_slice(&[0, 0, 0, 0, 2, 0, 2, 0, 0]);
         d.push(0x02); // LZW min code size

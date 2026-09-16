@@ -310,7 +310,17 @@ mod tests {
             let back = crate::codec::inflate::inflate_raw(&c, d.len() + 64)
                 .unwrap_or_else(|e| panic!("level {lvl}: {e}"));
             assert_eq!(back, d, "level {lvl}");
-            assert!(c.len() < d.len() / 2, "level {lvl} ratio {}", c.len());
+            // Level 0 is stored blocks: it cannot shrink anything, it only has to
+            // stay within input + block headers.
+            if lvl == 0 {
+                assert!(
+                    c.len() <= d.len() + (d.len() / 65_535 + 1) * 5 + 5,
+                    "stored level grew too much: {}",
+                    c.len()
+                );
+            } else {
+                assert!(c.len() < d.len() / 2, "level {lvl} ratio {}", c.len());
+            }
         }
         assert!(roundtrip_check(&d).unwrap());
     }
@@ -347,6 +357,7 @@ mod tests {
         assert_eq!(dist_code(4), (3, 0));
         assert_eq!(dist_code(5), (4, 0));
         assert_eq!(dist_code(6), (4, 1));
-        assert_eq!(dist_code(32768), (29, 16_383));
+        // Symbol 29 starts at 24577 with 13 extra bits, so 32768 is base+8191.
+        assert_eq!(dist_code(32768), (29, 8_191));
     }
 }

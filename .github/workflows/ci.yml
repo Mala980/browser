@@ -92,8 +92,8 @@ jobs:
         run: |
           set -o pipefail
           bash tests/e2e/run_real_browser_tests.sh 2>&1 | tee /tmp/e2e.log
-      - name: publish diagnostics
-        if: failure()
+      - name: publish log
+        if: always()
         run: |
           { echo "== astra headless =="; cat /tmp/astra-e2e/astra-headless.log 2>/dev/null;
             echo "== astra full =="; cat /tmp/astra-e2e/astra-full.log 2>/dev/null;

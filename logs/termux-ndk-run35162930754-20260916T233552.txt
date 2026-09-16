@@ -1,0 +1,10 @@
+cross compiling astra 0.1.0 (aarch64-linux-android24) with the NDK
+static link failed, falling back to dynamic
+src/cache.c:200:9: error: call to undeclared function 'unlink'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+  200 |         unlink(items[i].path);
+      |         ^
+1 error generated.
+src/cdp.c:707:21: warning: unused variable 'ttype' [-Wunused-variable]
+  707 |         const char *ttype = ti ? json_get_str(ti, "type", NULL) : NULL;
+      |                     ^~~~~
+1 warning generated.

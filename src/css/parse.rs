@@ -202,20 +202,7 @@ pub fn parse_sheet(css: &str) -> Sheet {
                             "font-family" => {
                                 ff.family = d.value().trim_matches('"').trim_matches('\'').to_string()
                             }
-                            "src" => {
-                                ff.src = split_top_sep(d.value(), ',')
-                                    .into_iter()
-                                    .filter_map(|s| {
-                                        let s = s.trim();
-                                        s.strip_prefix("url(").map(|u| {
-                                            u.trim_end_matches(')')
-                                                .trim_matches('"')
-                                                .trim_matches('\'')
-                                                .to_string()
-                                        })
-                                    })
-                                    .collect()
-                            }
+                            "src" => ff.src = extract_urls(d.value()),
                             "font-weight" => {
                                 ff.weight = d
                                     .value()
@@ -489,21 +476,73 @@ fn at_media_condition(prelude: &str) -> Media {
     m
 }
 
+/// Every `url(...)` in a value, in source order, unquoted. Needed because a
+/// `src` descriptor mixes `url() format()` with `local()`, and an `@import` may
+/// carry a media query after the url: splitting on commas or trimming trailing
+/// parens both mangle those. (A `)` inside an unquoted data: URL is not handled;
+/// quote the URL in that case.)
+pub fn extract_urls(value: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let b = value.as_bytes();
+    let mut i = 0usize;
+    while i + 4 <= b.len() {
+        if b[i] == b'u' && b[i + 1] == b'r' && b[i + 2] == b'l' && b[i + 3] == b'(' {
+            let mut j = i + 4;
+            while j < b.len() && (b[j] as char).is_ascii_whitespace() {
+                j += 1;
+            }
+            let quote = if j < b.len() && (b[j] == b'"' || b[j] == b'\'') {
+                Some(b[j])
+            } else {
+                None
+            };
+            if quote.is_some() {
+                j += 1;
+            }
+            let start = j;
+            while j < b.len() {
+                let c = b[j];
+                match quote {
+                    Some(q) => {
+                        if c == q {
+                            break;
+                        }
+                    }
+                    None => {
+                        if c == b')' {
+                            break;
+                        }
+                    }
+                }
+                j += 1;
+            }
+            if start <= j && j <= b.len() {
+                let u = value[start..j].trim();
+                if !u.is_empty() {
+                    out.push(u.to_string());
+                }
+            }
+            i = j + 1;
+            continue;
+        }
+        i += 1;
+    }
+    out
+}
+
 fn parse_import(prelude: &str) -> Option<String> {
     let p = prelude.trim();
-    let url = if let Some(rest) = p.strip_prefix("url(") {
-        rest.trim_end_matches(')')
-    } else if p.starts_with('"') || p.starts_with('\'') {
-        return Some(p.trim_matches('"').trim_matches('\'').to_string());
-    } else {
-        return None;
-    };
-    let u = url.trim().trim_matches('"').trim_matches('\'');
-    if u.is_empty() {
-        None
-    } else {
-        Some(u.to_string())
+    if let Some(u) = extract_urls(p).into_iter().next() {
+        return Some(u);
     }
+    if p.starts_with('"') || p.starts_with('\'') {
+        let u = p.trim_matches('"').trim_matches('\'').trim();
+        if u.is_empty() {
+            return None;
+        }
+        return Some(u.to_string());
+    }
+    None
 }
 
 /// Which pseudo-elements a rule's declarations target.
@@ -1162,6 +1201,11 @@ mod tests {
         assert_eq!(s.font_faces[0].family, "MyFont");
         assert_eq!(s.font_faces[0].src, vec!["a.woff2".to_string()]);
         assert_eq!(s.imports, vec!["b.css".to_string()]);
+        // A media query after the url, and a quoted url, must not confuse either.
+        let s2 = parse_sheet("@import url(\"c.css\") screen and (min-width: 400px);");
+        assert_eq!(s2.imports, vec!["c.css".to_string()]);
+        let s3 = parse_sheet("@font-face{font-family:X;src:local(Y),url('d.woff') format('woff')}");
+        assert_eq!(s3.font_faces[0].src, vec!["d.woff".to_string()]);
     }
 
     #[test]

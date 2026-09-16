@@ -471,8 +471,8 @@ mod tests {
 
     #[test]
     fn empty_and_small() {
-        // A single stored block: BFINAL=1 BTYPE=00, pad, LEN=0, NLEN=0xffff.
-        let raw = [0x01u8, 0x00, 0xff, 0xff];
+        // A single stored block: BFINAL=1 BTYPE=00, pad to byte, LEN=0, NLEN=!LEN.
+        let raw = [0x01u8, 0x00, 0x00, 0xff, 0xff];
         assert_eq!(inflate_raw(&raw, 1024).unwrap().len(), 0);
     }
 
@@ -487,11 +487,19 @@ mod tests {
             let Some(raw) = fixture(&format!("{base}.bin")) else {
                 continue;
             };
-            assert_eq!(gunzip(&gz).unwrap(), raw, "gzip fixture {base}");
+            assert_eq!(
+                gunzip(&gz).unwrap_or_else(|e| panic!("{base}.gz: {e}")),
+                raw,
+                "gzip fixture {base}"
+            );
             let Some(z) = fixture(&format!("{base}.zz")) else {
                 continue;
             };
-            assert_eq!(inflate_zlib(&z).unwrap(), raw, "zlib fixture {base}");
+            assert_eq!(
+                inflate_zlib(&z).unwrap_or_else(|e| panic!("{base}.zz: {e}")),
+                raw,
+                "zlib fixture {base}"
+            );
             let Some(st) = fixture(&format!("{base}.stored.zz")) else {
                 continue;
             };

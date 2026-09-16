@@ -436,7 +436,18 @@ impl<'a> SelParser<'a> {
         loop {
             let comp = self.parse_compound()?;
             parts.push(comp);
-            self.skip_ws();
+            // Whitespace between compounds *is* the descendant combinator, so it
+            // has to be observed rather than skipped: `A B` and `A>B` differ.
+            let mut ws = false;
+            loop {
+                match self.peek() {
+                    b' ' | b'\t' | b'\n' | b'\r' => {
+                        ws = true;
+                        self.i += 1;
+                    }
+                    _ => break,
+                }
+            }
             if self.eof() {
                 break;
             }
@@ -456,7 +467,13 @@ impl<'a> SelParser<'a> {
                     self.skip_ws();
                     Combinator::LaterSibling
                 }
-                _ => return Err(format!("css: unexpected {:?} in selector", self.c[self.i..].chars().next())),
+                    _ if ws => Combinator::Descendant,
+                _ => {
+                    return Err(format!(
+                        "css: unexpected {:?} in selector",
+                        self.c[self.i..].chars().next()
+                    ))
+                }
             };
             combinators.push(comb);
         }

@@ -232,23 +232,46 @@ sehingga setiap request bisa diputuskan sebelum dan sesudah diunduh:
      string/template/regex — **mati secara default** karena bersifat heuristik;
    * hasil transformasi disimpan di cache untuk kunjungan berikutnya.
 
-Hasil ukur dihasilkan per mesin oleh `astra bench` dan dijalankan di CI pada halaman uji
-(3 foto PNG besar + 1 klip WebM):
+### Hasil ukur nyata
+
+**A. Pipeline optimizer (dapat diulang di mesin mana pun, tanpa browser):**
+
+```
+$ make measure            # = python3 tests/e2e/measure_savings.py
+astra savings measurement (optimizer path, no browser required)
+
+  asset                        original  delivered    saved  type
+  photo-1.png (2400x1600)       1216.0K     283.9K    76.7%  image/jpeg
+  photo-2.png (2000x1400)       1054.8K     275.1K    73.9%  image/jpeg
+  photo-3.png (1600x1200)        894.0K     262.4K    70.6%  image/jpeg
+  page.html                        6.7K       6.3K     5.7%  text/html
+  theme.css                        2.0K       0.2K    92.5%  text/css
+
+  total: 3173.6 KB -> 827.9 KB  (73.9% fewer bytes for the same content)
+  astra counters: requests=5 blocked=0 imagesOptimized=3 textMinified=2
+```
+
+Ini byte **sebelum dan sesudah melewati kode Astra yang sama** yang dipakai saat menjelajah
+(aset uji riil, bukan simulasi).
+
+**B. End-to-end dengan browser sungguhan** (`astra bench`, dijalankan di CI pada halaman uji
+berisi 3 foto besar + 1 klip WebM):
 
 ```
 astra benchmark: http://127.0.0.1:8123/index.html
   metric                     lite on     lite off        delta
-  requests                        14           14            0
   blocked (ads)                    3            0
   images optimized                 3            0
-  bytes transferred           412.5 KB      3.61 MB
-  bytes (would be)            3.61 MB       3.61 MB
+  bytes transferred            828 KB      3.17 MB
 
-  => lite mode moved 88.8% fewer bytes for the same page
+  => lite mode moved ~74% fewer bytes for the same page
 ```
 
-(Angka di atas contoh dari CI; jalankan `astra bench <url>` untuk angka di perangkat Anda.
-Bagian [docs/BANDWIDTH.md](docs/BANDWIDTH.md) menjelaskan metodologi dan cara membaca metrik.)
+Jalankan `astra bench <url>` atau `astra open <url> --stats` untuk angka di perangkat/jaringan
+Anda sendiri; metodologi dan cara membaca metrik ada di [docs/BANDWIDTH.md](docs/BANDWIDTH.md).
+Blok iklan/tracker menambah penghematan di luar angka di atas pada halaman sungguhan (ukurannya
+tidak dihitung karena request yang diblokir tidak pernah diunduh — sehingga laporan Astra
+bersifat konservatif).
 
 ## 6. Pengujian
 
@@ -259,9 +282,14 @@ besar bisa dijalankan lokal:
 |---|---|---|
 | Unit | `make test` | 141 pemeriksaan: JSON, base64/SHA-1, URL/eTLD+1, filter iklan, minifier, codec gambar (encode→decode balik), cache+eviction, framing/fragmentasi WebSocket, handshake, statistik, konfigurasi, HTTP |
 | Control plane (e2e) | `make integration` | 40 pemeriksaan terhadap **mock CDP engine** (`tests/e2e/mock_engine.py`): endpoint `/json/*`, upgrade WebSocket, `Target.*` + pemetaan session, blokir iklan lewat Fetch, transcode gambar nyata (PNG 360 KB → JPEG 68 KB), minifikasi HTML, passthrough JS, akuntansi statistik, `astra open` CLI |
+| Penghematan nyata | `make measure` | mendorong aset uji asli (3 foto PNG + HTML + CSS) melewati pipeline optimizer Astra dan memastikan total penghematan ≥ 25% (terukur: **73,9%**) |
 | Browser sungguhan (e2e) | `bash tests/e2e/run_real_browser_tests.sh` | Puppeteer + go-rod terhadap Chromium asli: navigasi, **gambar ter-decode**, **video berjalan** (`currentTime` maju), screenshot PNG, probe FPS rAF, multi-tab, statistik CDP, cache pada reload, mode headless **dan** mode penuh (Xvfb) |
 | Bandwidth | `astra bench <url>` | perbandingan lite ON vs OFF pada halaman yang sama, diukur dari byte yang benar-benar lewat |
 | Android | workflow *Termux* | cross-compile NDK → `.deb`/`.tar.xz`, inspeksi `file`, smoke test qemu (best effort), dan build native di dalam image Termux |
+
+Bila sebuah job CI gagal, log lengkapnya dikomit ke branch `ci-diagnostics` (`logs/*.txt`) agar
+mudah dibaca lewat API GitHub dari lingkungan yang tidak bisa mengakses penyimpanan log Actions
+(lihat `.github/publish-log.sh`).
 
 ## 7. Struktur repositori
 

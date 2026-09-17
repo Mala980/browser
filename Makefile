@@ -17,7 +17,7 @@ MAINOBJ := $(BUILD)/src/main.o
 LIBOBJ  := $(filter-out $(MAINOBJ),$(patsubst src/%.c,$(BUILD)/src/%.o,$(SRC)))
 TARGET  := $(BUILD)/astra
 
-.PHONY: all clean test integration test-all install termux package
+.PHONY: all clean test integration measure test-all install termux package
 
 all: $(TARGET)
 
@@ -38,7 +38,10 @@ test: $(TARGET) $(BUILD)/astra-test
 integration: $(TARGET)
 	python3 tests/e2e/test_local.py
 
-test-all: test integration
+measure: $(TARGET)
+	python3 tests/e2e/measure_savings.py
+
+test-all: test integration measure
 	@echo "all local tests passed"
 
 $(BUILD)/astra-test: $(LIBOBJ) tests/unit/test_all.c | $(BUILD)

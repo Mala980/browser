@@ -55,9 +55,15 @@ jobs:
         run: |
           set -o pipefail
           python3 tests/e2e/test_local.py 2>&1 | tee /tmp/mock.log
+      - name: measure real byte savings on the test assets
+        run: |
+          set -o pipefail
+          python3 tests/e2e/measure_savings.py 2>&1 | tee /tmp/savings.log
       - name: publish diagnostics
         if: failure()
-        run: bash .github/publish-log.sh mock-e2e /tmp/mock.log
+        run: |
+          cat /tmp/savings.log >> /tmp/mock.log 2>/dev/null || true
+          bash .github/publish-log.sh mock-e2e /tmp/mock.log
 
   real-browser:
     name: real Chromium end-to-end (puppeteer + go-rod)

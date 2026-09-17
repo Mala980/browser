@@ -75,6 +75,25 @@ dilaporkan bersifat **konservatif**.
 `--video=block` menggagalkan request `Media` (hemat sangat besar di jaringan mahal). Default
 `auto` = video dilewatkan apa adanya; Astra tidak mentranscode video.
 
+## Angka yang terukur
+
+`make measure` (scripts: `tests/e2e/measure_savings.py`) mendorong aset uji asli melalui jalur
+optimizer yang sama persis dengan yang dipakai saat menjelajah:
+
+| Aset | Asli | Terkirim | Hemat |
+|---|---|---|---|
+| photo-1.png 2400×1600 | 1216,0 KB | 283,9 KB | 76,7 % |
+| photo-2.png 2000×1400 | 1054,8 KB | 275,1 KB | 73,9 % |
+| photo-3.png 1600×1200 | 894,0 KB | 262,4 KB | 70,6 % |
+| page.html | 6,7 KB | 6,3 KB | 5,7 % |
+| theme.css | 2,0 KB | 0,2 KB | 92,5 % |
+| **Total** | **3173,6 KB** | **827,9 KB** | **73,9 %** |
+
+Penghematan HTML tampak kecil karena minifier Astra sengaja konservatif (tidak pernah mengubah
+semantik markup): ia hanya membuang komentar, merapatkan whitespace, dan menyuntikkan atribut
+lazy-load. Pada halaman berita sungguhan (banyak komentar template dan indentasi) hasilnya
+biasanya 10–25 %.
+
 ## Mengukur sendiri
 
 ```bash

@@ -6,3 +6,5 @@ tests/e2e/site/assets/
 *.deb
 *.tar.xz
 .astra-cache/
+__pycache__/
+*.pyc

@@ -397,8 +397,19 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
     astra_stats_t on = g_stats;
     uint64_t on_net = cdp_net_rx();
 
-    /* pass 2: lite mode off (hard reload, cold cache) */
-    cdp_set_lite(0);
+    /* pass 2: same page, optimizers off (hard reload, cold cache).  Interception
+     * stays on so the byte counters work identically in both passes - that is
+     * what makes this an honest A/B and not "0 vs something". */
+    astra_config plain = *cfg;
+    plain.block_ads = 0;
+    plain.optimize_images = 0;
+    plain.minify_html = 0;
+    plain.minify_css = 0;
+    plain.minify_js = 0;
+    plain.strip_metadata = 0;
+    plain.lazy_load = 0;
+    plain.cache_enabled = 0;
+    cdp_set_config(&plain);
     stats_reset();
     cdp_net_rx_reset();
     json_t *p = jobj();
@@ -418,6 +429,8 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
            (unsigned long long)off.blocked);
     printf("  %-22s %12llu %12llu\n", "images optimized", (unsigned long long)on.images_optimized,
            (unsigned long long)off.images_optimized);
+    printf("  %-22s %12llu %12llu\n", "bytes delivered", (unsigned long long)on.bytes_delivered,
+           (unsigned long long)off.bytes_delivered);
     printf("  %-22s %12llu %12llu\n", "bytes over the wire", (unsigned long long)on_net,
            (unsigned long long)off_net);
     printf("  %-22s %12llu %12llu\n", "bytes (would be)", (unsigned long long)on.bytes_original,
@@ -425,11 +438,12 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
     /* The baseline is what Chrome itself reports on the wire; if the second pass
      * recorded nothing (no interception -> no counters), fall back to the sum of
      * the original response sizes that pass 1 saw. */
-    uint64_t baseline = off_net > 0 ? off_net : on.bytes_original;
+    uint64_t baseline = off.bytes_delivered > 0 ? off.bytes_delivered
+                      : (off_net > 0 ? off_net : on.bytes_original);
     if (baseline > 0) {
         double pct = 100.0 * ((double)baseline - (double)on_net) / (double)baseline;
         printf("\n  => lite mode moved %.1f%% fewer bytes for the same page (%.1f KB vs %.1f KB)\n",
-               pct, on_net / 1024.0, baseline / 1024.0);
+               pct, (on.bytes_delivered ? on.bytes_delivered : on_net) / 1024.0, baseline / 1024.0);
     } else {
         printf("\n  (no baseline to compare against)\n");
     }

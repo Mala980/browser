@@ -744,6 +744,21 @@ static void client_on_msg(conn_t *c, const uint8_t *data, size_t len) {
 
 /* ------------------------------------------------------- engine -> clients */
 
+/* Events carry the engine's session id at the top level when a flattened
+ * session is involved.  Translate it for the client that owns the session; when
+ * the session is not ours, drop the id instead of leaking one the client cannot
+ * resolve (Puppeteer silently discards events addressed to unknown sessions). */
+static void event_prepare(json_t *m, conn_t *c) {
+    const char *sid = json_get_str(m, "sessionId", NULL);
+    if (!sid) return;
+    session_t *s = session_by_engine(sid);
+    if (s && (!c || s->client == c)) {
+        jset(m, "sessionId", jstr(s->our_id));
+        return;
+    }
+    json_del(m, "sessionId");
+}
+
 static void fanout_event(json_t *m) {
     for (conn_t *c = S.clients; c; c = c->next) {
         if (c->state != CS_WS) continue;
@@ -870,6 +885,7 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
         }
         json_t *copy = json_clone(m);
         if (json_get(copy, "params")) jset(json_get(copy, "params"), "sessionId", jstr(s->our_id));
+        event_prepare(copy, owner);
         if (owner) {
             send_json_to(owner, copy);
         } else {
@@ -884,6 +900,7 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
         json_t *copy = json_clone(m);
         session_t *s = engine_sid ? session_by_engine(engine_sid) : NULL;
         if (s && json_get(copy, "params")) jset(json_get(copy, "params"), "sessionId", jstr(s->our_id));
+        event_prepare(copy, NULL);
         fanout_event(copy);
         json_free(copy);
         json_free(m);
@@ -914,8 +931,13 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
                 }
             }
         }
-        for (conn_t *cc = S.clients; cc; cc = cc->next)
-            if (cc->state == CS_WS && (cc->discover || cc->auto_attach)) send_json_to(cc, m);
+        for (conn_t *cc = S.clients; cc; cc = cc->next) {
+            if (cc->state != CS_WS || !(cc->discover || cc->auto_attach)) continue;
+            json_t *copy = json_clone(m);
+            event_prepare(copy, cc);
+            send_json_to(cc, copy);
+            json_free(copy);
+        }
         json_free(m);
         return;
     }
@@ -923,7 +945,7 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
         session_t *s = session_by_engine(sid);
         if (s && s->client) {
             json_t *copy = json_clone(m);
-            jset(copy, "sessionId", jstr(s->our_id));
+            event_prepare(copy, s->client);
             send_json_to(s->client, copy);
             json_free(copy);
             json_free(m);
@@ -1195,6 +1217,13 @@ void cdp_release_result(cdp_result_t *r) {
 }
 
 const char *cdp_page_session(void) { return S.page_session[0] ? S.page_session : NULL; }
+
+/* Swap the whole configuration at runtime (used by `astra bench` to measure the
+ * same page with and without the optimizers, with interception accounting on in
+ * both passes, so the two numbers are measured exactly the same way). */
+void cdp_set_config(const astra_config *cfg) {
+    if (cfg) S.cfg_store = *cfg;
+}
 
 int cdp_set_lite(int on) {
     S.cfg_store.lite = on ? 1 : 0;

@@ -39,6 +39,7 @@ const char *cdp_page_session(void);
 
 /* Toggle lite mode at runtime (used by `astra bench`). */
 int cdp_set_lite(int on);
+void cdp_set_config(const astra_config *cfg);
 int cdp_attach_to_first_page(int timeout_ms);
 void cdp_net_rx_reset(void);
 uint64_t cdp_net_rx(void);

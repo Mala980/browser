@@ -74,6 +74,9 @@ log "serve test site on :$SITE_PORT"
 SITE_PID=$!
 wait_http "$TEST_URL" 20 || { echo "test site not reachable" >&2; exit 1; }
 
+log "install node dependencies"
+( cd tests/e2e/puppeteer && npm install --silent --no-fund --no-audit ) || echo "  (npm install failed)"
+
 log "control experiment: puppeteer straight to the engine (no astra)"
 rm -rf "$OUT/direct-profile"
 "$ENGINE" --headless=new --no-sandbox --disable-gpu --remote-debugging-port="$DIRECT_PORT" \
@@ -84,7 +87,7 @@ DIRECT_WS="$(curl -fsS "http://127.0.0.1:$DIRECT_PORT/json/version" 2>/dev/null 
   sed -n 's/.*"webSocketDebuggerUrl": *"\([^"]*\)".*/\1/p')"
 if [[ -n "$DIRECT_WS" ]]; then
   ( cd tests/e2e/puppeteer && TEST_URL="$TEST_URL" DIRECT_WS="$DIRECT_WS" \
-    timeout 120 node ../probe_direct_chrome.mjs ) || echo "  (direct probe failed)"
+    timeout 120 node probe_direct_chrome.mjs ) || echo "  (direct probe failed)"
 else
   echo "  (engine did not expose a direct endpoint)"
 fi
@@ -125,8 +128,7 @@ wait_http "http://127.0.0.1:$PORT/json/version" 40 || {
 
 log "puppeteer (headless mode)"
 export ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL OUT_DIR="$OUT"
-( cd tests/e2e/puppeteer && npm install --silent --no-fund --no-audit >/dev/null 2>&1; \
-    timeout "$STEP_TIMEOUT" node test.mjs ) || rc=1
+( cd tests/e2e/puppeteer && timeout "$STEP_TIMEOUT" node test.mjs ) || rc=1
 
 log "cdp trace: puppeteer through astra (60s)"
 ASTRA_WS_NOW="$(curl -fsS "http://127.0.0.1:$PORT/json/version" 2>/dev/null |

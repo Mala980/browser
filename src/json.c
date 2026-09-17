@@ -87,6 +87,22 @@ void jset(json_t *obj, const char *key, json_t *val) {
     obj->n++;
 }
 
+void json_del(json_t *obj, const char *key) {
+    if (!obj || obj->type != J_OBJ || !key) return;
+    for (size_t i = 0; i < obj->n; i++) {
+        if (obj->keys[i] && strcmp(obj->keys[i], key) == 0) {
+            json_free(obj->items[i]);
+            free(obj->keys[i]);
+            for (size_t j = i + 1; j < obj->n; j++) {
+                obj->items[j - 1] = obj->items[j];
+                obj->keys[j - 1] = obj->keys[j];
+            }
+            obj->n--;
+            return;
+        }
+    }
+}
+
 /* --------------------------------------------------------------- accessors */
 
 json_t *json_get(json_t *obj, const char *key) {

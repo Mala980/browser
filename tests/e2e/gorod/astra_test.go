@@ -119,7 +119,7 @@ func TestAstraGoRod(t *testing.T) {
 		if vw <= 0 {
 			t.Fatal("no video frames decoded")
 		}
-		t.Logf("video currentTime=%.2f videoWidth=%d", ct, vw)
+		t.Logf("video currentTime=%.2f videoWidth=%.0f", ct, vw)
 	})
 
 	t.Run("javascript", func(t *testing.T) {

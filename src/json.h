@@ -46,6 +46,7 @@ json_t *jstrn(const char *s, size_t n);
 json_t *jarr(void);
 json_t *jobj(void);
 void jset(json_t *obj, const char *key, json_t *val);
+void json_del(json_t *obj, const char *key); /* no-op if absent */
 void jpush(json_t *arr, json_t *val);
 
 /* serialization */

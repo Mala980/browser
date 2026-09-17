@@ -16,7 +16,6 @@ FULL_PORT="${FULL_PORT:-9223}"
 DIRECT_PORT="${DIRECT_PORT:-9333}"
 SNIFF_PORT="${SNIFF_PORT:-9336}"
 SNIFF_PORT_DIRECT="${SNIFF_PORT_DIRECT:-9337}"
-SNIFF_PORT_GOROD="${SNIFF_PORT_GOROD:-9338}"
 SNIFF_DIRECT_PORT="${SNIFF_DIRECT_PORT:-9338}"
 SITE_PORT="${SITE_PORT:-8123}"
 TEST_URL="http://127.0.0.1:${SITE_PORT}/index.html"
@@ -148,27 +147,14 @@ fi
 
 log "go-rod"
 if command -v go >/dev/null 2>&1; then
-  # go-rod runs through the sniffer as well: if a call never comes back the
-  # trace names the command astra left unanswered.
-  GOROD_WS=""
-  if [[ -n "$ASTRA_WS_NOW" ]]; then
-    SNIFF_UPSTREAM="$ASTRA_WS_NOW" SNIFF_PORT="$SNIFF_PORT_GOROD" SNIFF_LOG="$OUT/sniff-gorod.log" \
-      node tests/e2e/puppeteer/cdp_sniffer.mjs >"$OUT/sniff-gorod.out" 2>&1 &
-    S3=$!
-    sleep 1
-    GOROD_WS="ws://127.0.0.1:$SNIFF_PORT_GOROD"
-  fi
+  # go-rod speaks CDP over its own websocket client, which sends a placeholder
+  # Sec-WebSocket-Key: strict servers (the node based sniffer) reject it, so it
+  # talks to astra directly and astra's own log is the trace.
   ( cd tests/e2e/gorod && go mod tidy >/dev/null 2>&1; \
-    ASTRA_WS="$GOROD_WS" \
     ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL="$TEST_URL" \
     timeout "$STEP_TIMEOUT" go test -timeout 300s -v ./... ) || rc=1
-  if [[ -n "$GOROD_WS" ]]; then
-    kill "$S3" 2>/dev/null
-    echo "  last CDP messages seen by go-rod:"
-    tail -40 "$OUT/sniff-gorod.log" 2>/dev/null
-  fi
-  echo "  astra log tail:"
-  tail -40 "$OUT/astra-headless.log" 2>/dev/null
+  echo "  astra log tail (unanswered commands show up as warnings):"
+  tail -60 "$OUT/astra-headless.log" 2>/dev/null
 else
   echo "go not installed - skipping go-rod tests"
 fi

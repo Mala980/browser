@@ -389,6 +389,11 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
     }
     const char *sess = cdp_page_session();
 
+    /* Chrome's own byte counters (Network.loadingFinished) are the only numbers
+     * an outside observer can check; without Network.enable astra would have
+     * nothing to report for "bytes over the wire". */
+    cdp_cmd_simple(sess, "Network.enable", NULL, 5000);
+
     /* pass 1: lite mode on */
     stats_reset();
     cdp_net_rx_reset();
@@ -435,15 +440,17 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
            (unsigned long long)off_net);
     printf("  %-22s %12llu %12llu\n", "bytes (would be)", (unsigned long long)on.bytes_original,
            (unsigned long long)off.bytes_original);
-    /* The baseline is what Chrome itself reports on the wire; if the second pass
-     * recorded nothing (no interception -> no counters), fall back to the sum of
-     * the original response sizes that pass 1 saw. */
+    /* Both passes keep interception on, so both byte counters come from the same
+     * place: what astra handed back to the renderer.  The baseline is the pass
+     * with the optimizers switched off; Chrome's wire counter is only a fallback
+     * for engines that never report through the interception path. */
+    uint64_t lite_bytes = on.bytes_delivered > 0 ? on.bytes_delivered : on_net;
     uint64_t baseline = off.bytes_delivered > 0 ? off.bytes_delivered
                       : (off_net > 0 ? off_net : on.bytes_original);
     if (baseline > 0) {
-        double pct = 100.0 * ((double)baseline - (double)on_net) / (double)baseline;
+        double pct = 100.0 * ((double)baseline - (double)lite_bytes) / (double)baseline;
         printf("\n  => lite mode moved %.1f%% fewer bytes for the same page (%.1f KB vs %.1f KB)\n",
-               pct, (on.bytes_delivered ? on.bytes_delivered : on_net) / 1024.0, baseline / 1024.0);
+               pct, lite_bytes / 1024.0, baseline / 1024.0);
     } else {
         printf("\n  (no baseline to compare against)\n");
     }

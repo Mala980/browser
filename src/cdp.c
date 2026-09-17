@@ -66,6 +66,8 @@ typedef struct pending {
     conn_t *client;
     char session[160];
     char method[64];
+    uint64_t sent_ms;
+    int warned;
     struct pending *next;
 } pending_t;
 
@@ -288,6 +290,7 @@ static void pending_add(int id, int orig_id, conn_t *client, const char *session
     p->client = client;
     snprintf(p->session, sizeof(p->session), "%s", session ? session : "");
     snprintf(p->method, sizeof(p->method), "%s", method ? method : "");
+    p->sent_ms = wall_ms();
     p->next = S.pendings;
     S.pendings = p;
 }
@@ -357,6 +360,20 @@ static uint64_t g_net_rx = 0;
 
 void cdp_net_rx_reset(void) { g_net_rx = 0; }
 uint64_t cdp_net_rx(void) { return g_net_rx; }
+
+/* A command the engine never answers is invisible from the client side (it just
+ * hangs until its own timeout), so complain in the log instead: this is what
+ * makes a stalled CDP call diagnosable without a protocol sniffer. */
+static void pending_watchdog(void) {
+    uint64_t now = wall_ms();
+    for (pending_t *p = S.pendings; p; p = p->next) {
+        if (p->warned || now - p->sent_ms < 10000) continue;
+        p->warned = 1;
+        LOGW("engine did not answer %s (client id=%d, engine id=%d, session=%s) after %.1fs",
+             p->method[0] ? p->method : "?", p->orig_id, p->id,
+             p->session[0] ? p->session : "-", (now - p->sent_ms) / 1000.0);
+    }
+}
 
 static void compat_tick(void) {
     uint64_t now = wall_ms();
@@ -1111,6 +1128,7 @@ static int do_poll(int timeout_ms) {
         if (c->fd >= 0 && (fds[i].revents & POLLOUT)) handle_conn_writable(c);
     }
     compat_tick();
+    pending_watchdog();
 
     /* flush queued writes before reaping, otherwise short lived HTTP
      * responses would be dropped together with the connection */
@@ -1448,7 +1466,11 @@ int cdp_attach(const astra_config *cfg, engine_t *eng) {
     snprintf(S.browser_id, sizeof(S.browser_id), "astra-%d", (int)getpid());
     install_signals();
     stats_reset();
-    S.opt = optimizer_new(cfg, optimizer_send, NULL);
+    /* hand the optimizer astra's own config copy: cdp_set_config() rewrites it
+     * in place (that is how `astra bench` turns the optimizers off for its
+     * second pass), so a pointer to the caller's struct would freeze the
+     * settings that were active at startup. */
+    S.opt = optimizer_new(S.cfg, optimizer_send, NULL);
     if (engine_connect_ws(cfg, eng) != 0) {
         LOGE("cannot connect to engine websocket %s", eng->ws_url);
         return -1;

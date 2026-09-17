@@ -259,13 +259,21 @@ berisi 3 foto besar + 1 klip WebM):
 
 ```
 astra benchmark: http://127.0.0.1:8123/index.html
-  metric                     lite on     lite off        delta
-  blocked (ads)                    3            0
-  images optimized                 3            0
-  bytes transferred            828 KB      3.17 MB
+  metric                         lite on     lite off        delta
+  requests                            5            6           +1
+  blocked (ads)                       0            0
+  images optimized                    3            0
+  bytes on the wire (chrome)    2352395      8326184
+  bytes handed to the renderer  1721427          n/a
+  bytes before optimizing       8324717          n/a
 
-  => lite mode moved ~74% fewer bytes for the same page
+  => lite mode moved 71.7% fewer bytes for the same page (2297.3 KB vs 8131.0 KB)
 ```
+
+Kolom `lite off` diukur dengan penghitung jaringan milik Chrome sendiri (`Network.loadingFinished`),
+bukan dengan perkiraan Astra, sehingga kedua angka berasal dari sumber yang sama. Penghitung
+Astra hanya ada di pass lite: saat optimizer mati ia meneruskan body apa adanya, jadi ia tidak
+pernah melihat (dan tidak bisa menghitung) byte yang lewat — karenanya `n/a`.
 
 Jalankan `astra bench <url>` atau `astra open <url> --stats` untuk angka di perangkat/jaringan
 Anda sendiri; metodologi dan cara membaca metrik ada di [docs/BANDWIDTH.md](docs/BANDWIDTH.md).

@@ -109,9 +109,16 @@ curl -s http://127.0.0.1:9222/stats | jq
    gambar, minifikasi, lazy-load dan cache **nonaktif**) → `Page.reload{ignoreCache:true}`
    → rekam statistik
 
-Intersepsi `Fetch` tetap menyala di kedua pass, jadi kedua penghitung byte berasal dari
-tempat yang sama dan pass dua tidak bisa kecolongan cache yang diisi pass satu. Yang
-berbeda hanya pekerjaan optimizer — itu yang membuat perbandingannya jujur.
+Pass dua memakai `Page.reload{ignoreCache:true}` dan cache yang dimatikan, jadi ia tidak
+bisa kecolongan cache yang diisi pass satu. Yang berbeda hanya pekerjaan optimizer — itu
+yang membuat perbandingannya jujur.
+
+Satu hal yang perlu diketahui saat membaca tabelnya: dengan optimizer mati Astra meneruskan
+setiap body apa adanya (ia tidak meminta tahap response bila tidak ada yang perlu diubah),
+sehingga penghitung "byte yang diserahkan ke renderer" miliknya memang 0 di pass dua —
+bukan karena tidak ada yang lewat. Karena itu basis perbandingannya diambil dari penghitung
+jaringan Chrome sendiri (`Network.loadingFinished.encodedDataLength`), yang berjalan di
+kedua pass dengan cara yang sama.
 
 ## Menyetel
 

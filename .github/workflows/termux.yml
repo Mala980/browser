@@ -70,8 +70,12 @@ jobs:
         if: steps.image.outputs.image != ''
         run: |
           set +e
+          # The container runs as its own uid, which does not own the checkout:
+          # without this the build dies on "mkdir: cannot create directory
+          # 'build': Permission denied" before it compiles anything.
+          chmod -R a+rwX "$PWD" || true
           # NOTE: Termux has no /bin, everything lives under $PREFIX - just call bash
-          docker run --rm -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" \
+          docker run --rm -u 0 -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" \
             bash .github/termux-native-build.sh 2>&1 | tee /tmp/termux-native.log
           rc=${PIPESTATUS[0]}
           echo "docker exit status: $rc"

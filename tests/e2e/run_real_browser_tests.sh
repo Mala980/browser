@@ -16,7 +16,9 @@ FULL_PORT="${FULL_PORT:-9223}"
 DIRECT_PORT="${DIRECT_PORT:-9333}"
 SNIFF_PORT="${SNIFF_PORT:-9336}"
 SNIFF_PORT_DIRECT="${SNIFF_PORT_DIRECT:-9337}"
+PROXY_PORT="${PROXY_PORT:-9339}"
 SNIFF_DIRECT_PORT="${SNIFF_DIRECT_PORT:-9338}"
+GOROD_DIRECT_PORT="${GOROD_DIRECT_PORT:-9335}"
 SITE_PORT="${SITE_PORT:-8123}"
 TEST_URL="http://127.0.0.1:${SITE_PORT}/index.html"
 OUT="${OUT:-/tmp/astra-e2e}"
@@ -147,14 +149,47 @@ fi
 
 log "go-rod"
 if command -v go >/dev/null 2>&1; then
-  # go-rod speaks CDP over its own websocket client, which sends a placeholder
-  # Sec-WebSocket-Key: strict servers (the node based sniffer) reject it, so it
-  # talks to astra directly and astra's own log is the trace.
+  # go-rod's websocket client sends a placeholder Sec-WebSocket-Key, which the
+  # node based sniffer refuses; tests/e2e/cdp_proxy.py accepts any key and logs
+  # every message in both directions.
+  GOROD_WS=""
+  if [[ -n "$ASTRA_WS_NOW" ]]; then
+    python3 tests/e2e/cdp_proxy.py --upstream "$ASTRA_WS_NOW" --port "$PROXY_PORT" \
+      --log "$OUT/gorod-cdp.log" >"$OUT/gorod-cdp.out" 2>&1 &
+    P3=$!
+    sleep 1
+    GOROD_WS="ws://127.0.0.1:$PROXY_PORT/devtools/browser/astra"
+  fi
   ( cd tests/e2e/gorod && go mod tidy >/dev/null 2>&1; \
+    ASTRA_WS="$GOROD_WS" \
     ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL="$TEST_URL" \
     timeout "$STEP_TIMEOUT" go test -timeout 300s -v ./... ) || rc=1
+  if [[ -n "$GOROD_WS" ]]; then
+    kill "$P3" 2>/dev/null
+    echo "  last CDP messages seen by go-rod:"
+    tail -40 "$OUT/gorod-cdp.log" 2>/dev/null
+  fi
   echo "  astra log tail (unanswered commands show up as warnings):"
-  tail -60 "$OUT/astra-headless.log" 2>/dev/null
+  tail -40 "$OUT/astra-headless.log" 2>/dev/null
+
+  # Control: the same suite straight against Chrome, no astra in between.  If it
+  # hangs there too the problem is a go-rod/Chrome version mismatch, not the
+  # proxy - without this run a go-rod failure always looks like an astra bug.
+  log "go-rod control: straight to Chrome (no astra)"
+  "$ENGINE" --headless=new --no-sandbox --disable-gpu \
+    --remote-debugging-port="$GOROD_DIRECT_PORT" \
+    --user-data-dir="$OUT/gorod-control-profile" about:blank >"$OUT/gorod-control-chrome.log" 2>&1 &
+  GD_PID=$!
+  if wait_http "http://127.0.0.1:$GOROD_DIRECT_PORT/json/version" 30; then
+    ( cd tests/e2e/gorod && GOROD_CONTROL=1 \
+      ASTRA_HTTP="http://127.0.0.1:$GOROD_DIRECT_PORT" TEST_URL="$TEST_URL" \
+      timeout 150 go test -timeout 200s -v -run TestAstraGoRod ./... ) \
+      || echo "  (go-rod does not work with this Chrome build either)"
+  else
+    echo "  (control Chrome did not start)"
+  fi
+  kill "$GD_PID" 2>/dev/null
+  pkill -f -- "--remote-debugging-port=$GOROD_DIRECT_PORT" 2>/dev/null
 else
   echo "go not installed - skipping go-rod tests"
 fi

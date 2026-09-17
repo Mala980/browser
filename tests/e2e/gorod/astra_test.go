@@ -148,6 +148,11 @@ func TestAstraGoRod(t *testing.T) {
 	})
 
 	t.Run("astra stats", func(t *testing.T) {
+		// GOROD_CONTROL points the suite straight at Chrome: everything above
+		// must work there too, only astra's own endpoints do not exist.
+		if os.Getenv("GOROD_CONTROL") != "" {
+			t.Skip("control run against the engine without astra")
+		}
 		base := os.Getenv("ASTRA_HTTP")
 		if base == "" {
 			base = "http://127.0.0.1:9222"

@@ -21,6 +21,11 @@ import (
 
 func endpoint(t *testing.T) string {
 	t.Helper()
+	// ASTRA_WS routes the client through a CDP sniffer, which is how the CI job
+	// records the trace that shows where a run stalls.
+	if ws := os.Getenv("ASTRA_WS"); ws != "" {
+		return ws
+	}
 	base := os.Getenv("ASTRA_HTTP")
 	if base == "" {
 		base = "http://127.0.0.1:9222"

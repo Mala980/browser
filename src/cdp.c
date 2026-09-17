@@ -882,6 +882,14 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
         S.wait_event.got = 1;
     }
 
+    /* Bytes Chrome's network stack reports: independent of astra's own
+     * accounting, and it also counts when astra never sees a response body
+     * (optimizers off -> no response stage interception). */
+    if (!strcmp(method, "Network.loadingFinished") && params) {
+        double len = json_get_num(params, "encodedDataLength", 0);
+        if (len > 0) g_net_rx += (uint64_t)len;
+    }
+
     /* page host tracking for third-party detection */
     if (!strcmp(method, "Page.frameNavigated") && params) {
         json_t *frame = json_get(params, "frame");

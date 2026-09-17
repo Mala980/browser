@@ -440,13 +440,13 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
            (unsigned long long)off_net);
     printf("  %-22s %12llu %12llu\n", "bytes (would be)", (unsigned long long)on.bytes_original,
            (unsigned long long)off.bytes_original);
-    /* Both passes keep interception on, so both byte counters come from the same
-     * place: what astra handed back to the renderer.  The baseline is the pass
-     * with the optimizers switched off; Chrome's wire counter is only a fallback
-     * for engines that never report through the interception path. */
-    uint64_t lite_bytes = on.bytes_delivered > 0 ? on.bytes_delivered : on_net;
-    uint64_t baseline = off.bytes_delivered > 0 ? off.bytes_delivered
-                      : (off_net > 0 ? off_net : on.bytes_original);
+    /* Both passes are measured with Chrome's own network counter: it counts for
+     * every request whether or not astra rewrites the body, so the two numbers
+     * are comparable.  Astra's counters (what it handed to the renderer) are the
+     * fallback for engines that do not report Network.loadingFinished. */
+    uint64_t lite_bytes = on_net > 0 ? on_net : on.bytes_delivered;
+    uint64_t baseline = off_net > 0 ? off_net
+                      : (off.bytes_delivered > 0 ? off.bytes_delivered : on.bytes_original);
     if (baseline > 0) {
         double pct = 100.0 * ((double)baseline - (double)lite_bytes) / (double)baseline;
         printf("\n  => lite mode moved %.1f%% fewer bytes for the same page (%.1f KB vs %.1f KB)\n",

@@ -69,13 +69,12 @@ jobs:
       - name: build inside Termux
         if: steps.image.outputs.image != ''
         run: |
-          docker run --rm -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" bash -c \
-            "pkg update -y >/dev/null 2>&1; pkg install -y clang make >/dev/null 2>&1; bash scripts/build-termux.sh --package"
-      - name: run the unit tests inside Termux
+          set -o pipefail
+          docker run --rm -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" \
+            bash .github/termux-native-build.sh 2>&1 | tee /tmp/termux-native.log
+      - name: publish log
         if: steps.image.outputs.image != ''
-        run: |
-          docker run --rm -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" bash -c \
-            "make -j2 build/astra-test && ./build/astra-test && ./build/astra version"
+        run: bash .github/publish-log.sh termux-native /tmp/termux-native.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

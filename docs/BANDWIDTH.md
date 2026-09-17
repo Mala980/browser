@@ -102,13 +102,16 @@ astra open https://example.com --stats   # laporan sekali jalan
 curl -s http://127.0.0.1:9222/stats | jq
 ```
 
-`astra bench` menjalankan dua_pass pada engine yang sama:
+`astra bench` menjalankan dua pass pada engine yang sama:
 
-1. lite **on** → navigasi → rekam statistik
-2. `Astra` mematikan lite (`Fetch.disable` pada sesi yang ada) → `Page.reload{ignoreCache:true}`
+1. lite **on** (semua optimizer aktif) → navigasi → rekam statistik
+2. optimizer dimatikan untuk pass ini saja (`cdp_set_config`: blokir iklan, transcode
+   gambar, minifikasi, lazy-load dan cache **nonaktif**) → `Page.reload{ignoreCache:true}`
    → rekam statistik
 
-yang membandingkan byte yang benar-benar berpindah untuk konten yang identik.
+Intersepsi `Fetch` tetap menyala di kedua pass, jadi kedua penghitung byte berasal dari
+tempat yang sama dan pass dua tidak bisa kecolongan cache yang diisi pass satu. Yang
+berbeda hanya pekerjaan optimizer — itu yang membuat perbandingannya jujur.
 
 ## Menyetel
 

@@ -17,7 +17,7 @@ MAINOBJ := $(BUILD)/src/main.o
 LIBOBJ  := $(filter-out $(MAINOBJ),$(patsubst src/%.c,$(BUILD)/src/%.o,$(SRC)))
 TARGET  := $(BUILD)/astra
 
-.PHONY: all clean test integration measure test-all install termux package
+.PHONY: all clean test integration measure test-all install termux package puppeteer
 
 # NOTE: `make build` is a no-op - `build` is the output directory, so make
 # considers that target up to date.  Use `make` (or `make all`) to compile.
@@ -36,6 +36,10 @@ $(BUILD):
 test: $(TARGET) $(BUILD)/astra-test
 	./$(BUILD)/astra-test
 	@echo "unit tests ok"
+
+# puppeteer against the protocol level mock engine: no browser needed
+puppeteer: $(TARGET)
+	bash tests/e2e/run_mock_browser_tests.sh
 
 integration: $(TARGET)
 	python3 tests/e2e/test_local.py

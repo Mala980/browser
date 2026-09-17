@@ -323,12 +323,9 @@ def main():
               'Astra.getVersion works over CDP', str(r)[:160])
 
         # puppeteer/go-rod send everything on a page session: same domain must work there too
-        # Flattened session events carry the engine session id at the top level:
-        # Puppeteer drops every event addressed to a session it does not know, so
-        # astra must translate that id (regression: it used to leak "S1").
         # Flattened session events carry the engine session id at the top level.
         # Puppeteer drops every event addressed to a session it does not know, so
-        # astra must translate that id (regression: it used to leak "S2"/"S3"...).
+        # astra must translate that id (regression: it used to leak "S1"/"S2"...).
         sessions = c.request('Mock.getSessions')['result']['sessions']
         engine_sid = sessions[-1]['sessionId'] if sessions else None
         check(engine_sid is not None, 'the engine exposes its session ids',
@@ -358,9 +355,18 @@ def main():
         r = c.request('Astra.getStats', session=session)
         check(r is not None and 'result' in r and r['result'].get('requests', 0) >= 4,
               'Astra.getStats works on a page session (as puppeteer sends it)', str(r)[:160])
+        # regression: puppeteer routes responses by sessionId, so answering a
+        # session scoped command without one leaves its promise pending forever
+        check(r is not None and r.get('sessionId') == session,
+              'Astra domain echoes the caller session id', str(r)[:160])
+        r = c.request('Astra.getVersion', session=session)
+        check(r is not None and r.get('sessionId') == session and r['result'].get('version'),
+              'Astra.getVersion echoes the caller session id', str(r)[:160])
         r = c.request('Astra.resetStats', session=session)
         check(r is not None and 'result' in r,
               'Astra.resetStats works on a page session', str(r)[:160])
+        check(r is not None and r.get('sessionId') == session,
+              'Astra.resetStats echoes the caller session id', str(r)[:160])
         r = c.request('Astra.getStats', session=session)
         check(r is not None and r['result'].get('requests', 0) == 0,
               'resetStats really resets the counters', str(r)[:160])

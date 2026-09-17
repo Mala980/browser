@@ -19,6 +19,8 @@ TARGET  := $(BUILD)/astra
 
 .PHONY: all clean test integration measure test-all install termux package
 
+# NOTE: `make build` is a no-op - `build` is the output directory, so make
+# considers that target up to date.  Use `make` (or `make all`) to compile.
 all: $(TARGET)
 
 $(BUILD)/src/%.o: src/%.c | $(BUILD)

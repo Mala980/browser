@@ -157,6 +157,10 @@ class MockEngine:
         self.targets = {'T1': Target('T1', 'page', 'about:blank'),
                         'T2': Target('T2', 'other', '')}
         self.sessions = {}  # sessionId -> targetId, in creation order
+        self.loader_seq = 0  # Chrome hands out a fresh loaderId per navigation and
+                             # puppeteer's LifecycleWatcher only resolves a new
+                             # document navigation when it sees the id change
+        self.session_url = {}  # sessionId -> last url it navigated to
 
     @staticmethod
     def _filter_matches(ttype, filters):
@@ -201,7 +205,10 @@ class MockEngine:
         except Exception:
             pass
 
-    def emit_navigation(self, session, url):
+    def target_url(self, session):
+        return self.session_url.get(session or 'S1')
+
+    def emit_navigation(self, session, url, loader='L1'):
         self.ws.send({'method': 'Page.frameNavigated', 'sessionId': session,
                       'params': {'frame': {'id': 'F1', 'url': url,
                                            'mimeType': 'text/html'}}})
@@ -211,7 +218,7 @@ class MockEngine:
                      'firstMeaningfulPaintCandidate', 'networkAlmostIdle',
                      'networkIdle'):
             self.ws.send({'method': 'Page.lifecycleEvent', 'sessionId': session,
-                          'params': {'frameId': 'F1', 'loaderId': 'L1', 'name': name,
+                          'params': {'frameId': 'F1', 'loaderId': loader, 'name': name,
                                      'timestamp': 1.0}})
         self.ws.send({'method': 'Page.loadEventFired', 'sessionId': session,
                       'params': {'timestamp': 1.0}})
@@ -325,6 +332,20 @@ class MockEngine:
                 return ok({})
             sid = self._attach(t)
             return ok({'sessionId': sid})
+        if method == 'Target.closeTarget':
+            t = self.targets.pop(params.get('targetId'), None)
+            if t is not None:
+                # Chrome detaches every session of the target and then destroys it
+                for sid, tid in list(self.sessions.items()):
+                    if tid == t.tid:
+                        self.ws.send({'method': 'Target.detachedFromTarget',
+                                      'sessionId': sid,
+                                      'params': {'sessionId': sid}})
+                        self.sessions.pop(sid, None)
+                        self.session_url.pop(sid, None)
+                self.ws.send({'method': 'Target.targetDestroyed',
+                              'params': {'targetId': t.tid}})
+            return ok({'success': True})
         if method == 'Target.detachFromTarget':
             self.ws.send({'method': 'Target.detachedFromTarget',
                           'sessionId': params.get('sessionId'),
@@ -343,8 +364,12 @@ class MockEngine:
         if method == 'Page.navigate':
             # NOTE: the session id is a top level field of the CDP message, it is
             # not part of params - events must go back on that same session.
-            self.emit_navigation(session or 'S1', params.get('url'))
-            return ok({'frameId': 'F1', 'loaderId': 'L1'})
+            self.loader_seq += 1
+            loader = 'L%d' % self.loader_seq
+            if session:
+                self.session_url[session] = params.get('url')
+            self.emit_navigation(session or 'S1', params.get('url'), loader)
+            return ok({'frameId': 'F1', 'loaderId': loader})
         if method == 'Runtime.callFunctionOn':
             value = fake_eval(params.get('functionDeclaration'), params.get('arguments'))
             jtype = 'number' if isinstance(value, (int, float)) else (
@@ -355,6 +380,14 @@ class MockEngine:
             jtype = 'number' if isinstance(value, (int, float)) else (
                 'object' if isinstance(value, list) else 'string')
             return ok({'result': {'type': jtype, 'value': value}})
+        if method == 'Page.reload':
+            # same as navigate, but the url is the one the frame already has
+            self.loader_seq += 1
+            loader = 'L%d' % self.loader_seq
+            self.emit_navigation(session or 'S1',
+                                 self.target_url(session) or 'http://example.test/',
+                                 loader)
+            return ok()
         if method == 'Page.captureScreenshot':
             return ok({'data': base64.b64encode(make_png(640, 480)).decode()})
         if method == 'Fetch.getResponseBody':

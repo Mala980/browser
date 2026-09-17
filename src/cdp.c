@@ -594,19 +594,24 @@ static void forward_to_engine(conn_t *client, json_t *m) {
     json_free(out);
 }
 
+/* Astra's own domain: answered locally, never forwarded to the engine.  The
+ * caller's session id has to be echoed back: client libraries route command
+ * responses by sessionId, so a browser-level reply to a command that was sent
+ * on a page session would never resolve on their side. */
 static void handle_astra(conn_t *c, json_t *m) {
     const char *method = json_get_str(m, "method", "");
+    const char *sid = json_get_str(m, "sessionId", NULL);
     int id = (int)json_get_num(m, "id", 0);
     if (!strcmp(method, "Astra.getStats")) {
         json_t *r = jobj();
         stats_json(r);
-        send_ok(c, id, NULL, r);
+        send_ok(c, id, sid, r);
         json_free(r);
         return;
     }
     if (!strcmp(method, "Astra.resetStats")) {
         stats_reset();
-        send_ok(c, id, NULL, jobj());
+        send_ok(c, id, sid, jobj());
         return;
     }
     if (!strcmp(method, "Astra.getConfig")) {
@@ -619,7 +624,7 @@ static void handle_astra(conn_t *c, json_t *m) {
         jset(r, "imageQuality", jnum((double)S.cfg->image_quality));
         jset(r, "cache", jbool(S.cfg->cache_enabled));
         jset(r, "rules", jnum((double)optimizer_rule_count(S.opt)));
-        send_ok(c, id, NULL, r);
+        send_ok(c, id, sid, r);
         json_free(r);
         return;
     }
@@ -628,11 +633,11 @@ static void handle_astra(conn_t *c, json_t *m) {
         jset(r, "version", jstr(ASTRA_VERSION));
         jset(r, "engine", jstr(S.eng && S.eng->bin[0] ? S.eng->bin : "attached"));
         jset(r, "browser", jstr(S.eng && S.eng->browser[0] ? S.eng->browser : "unknown"));
-        send_ok(c, id, NULL, r);
+        send_ok(c, id, sid, r);
         json_free(r);
         return;
     }
-    send_error(c, id, NULL, "Unknown Astra domain method");
+    send_error(c, id, sid, "Unknown Astra domain method");
 }
 
 static void handle_target(conn_t *c, json_t *m) {

@@ -94,10 +94,16 @@ func TestAstraGoRod(t *testing.T) {
 	})
 
 	t.Run("images decoded", func(t *testing.T) {
-		val := page.MustEval(`() => Array.from(document.images).map(i => i.naturalWidth)`)
+		// MustEval hands back a go value, not the raw JSON text: marshal it the
+		// same way evalNumber does instead of trusting val.String() (which
+		// formats an array as "[2400 2000 1600]", not valid JSON).
+		raw, err := json.Marshal(page.MustEval(`() => Array.from(document.images).map(i => i.naturalWidth)`))
+		if err != nil {
+			t.Fatalf("cannot marshal the result: %v", err)
+		}
 		var widths []int
-		if err := json.Unmarshal([]byte(val.String()), &widths); err != nil {
-			t.Fatalf("cannot parse widths: %v", err)
+		if err := json.Unmarshal(raw, &widths); err != nil {
+			t.Fatalf("cannot parse widths: %v (%s)", err, raw)
 		}
 		if len(widths) < 3 {
 			t.Fatalf("expected 3 images, got %d", len(widths))

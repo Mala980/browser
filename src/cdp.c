@@ -319,7 +319,7 @@ static void patch_engine_port(char *s, size_t len, int from, int to) {
     size_t fl = strlen(frompat);
     size_t pos = 0;
     while (pos + fl + 1 <= len) {
-        char *hit = (char *)memmem(s + pos, len - pos, frompat, fl);
+        char *hit = (char *)astr_memmem(s + pos, len - pos, frompat, fl);
         if (!hit) break;
         size_t off = (size_t)(hit - s);
         char nextc = s[off + fl];

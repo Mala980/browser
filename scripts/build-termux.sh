@@ -16,7 +16,7 @@ echo "building astra $VERSION for $(uname -m) with $CC"
 
 mkdir -p build
 # shellcheck disable=SC2086
-$CC $CFLAGS -Isrc src/*.c -o build/astra -lm -lpthread
+$CC $CFLAGS -Isrc src/*.c -o build/astra -lm   # bionic: no separate -lpthread
 echo "built: build/astra ($(du -h build/astra | cut -f1))"
 
 if [[ "${1:-}" == "--package" ]]; then

@@ -55,6 +55,7 @@ int astr_starts_ci(const char *s, const char *prefix);
 int astr_ends_ci(const char *s, const char *suffix);
 char *astr_trim(char *s);
 int astr_contains_ci(const char *hay, const char *needle);
+void *astr_memmem(const void *hay, size_t haylen, const void *needle, size_t needlelen);
 void astr_hex(const uint8_t *data, size_t len, char *out);
 
 /* ------------------------------------------------------------------ crypto */

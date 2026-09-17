@@ -201,6 +201,22 @@ int astr_contains_ci(const char *hay, const char *needle) {
     return 0;
 }
 
+/* memmem() is a GNU extension: provide a portable two-way-ish search */
+void *astr_memmem(const void *hay, size_t haylen, const void *needle, size_t needlelen) {
+    if (!hay || !needle) return NULL;
+    if (needlelen == 0) return (void *)hay;
+    if (needlelen > haylen) return NULL;
+    const unsigned char *h = (const unsigned char *)hay;
+    const unsigned char *n = (const unsigned char *)needle;
+    const unsigned char *end = h + (haylen - needlelen);
+    unsigned char first = n[0];
+    for (const unsigned char *p = h; p <= end; p++) {
+        if (*p != first) continue;
+        if (memcmp(p, n, needlelen) == 0) return (void *)p;
+    }
+    return NULL;
+}
+
 void astr_hex(const uint8_t *data, size_t len, char *out) {
     static const char *hexd = "0123456789abcdef";
     for (size_t i = 0; i < len; i++) {

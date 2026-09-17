@@ -54,20 +54,28 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: build in the Termux docker image
-        id: termuxbuild
+      - name: resolve the Termux docker image
+        id: image
         run: |
-          docker run --rm -v "$PWD":/src -w /src \
-            ghcr.io/termux/termux-docker:latest bash -c \
-            "pkg update -y >/dev/null && pkg install -y clang make >/dev/null && bash scripts/build-termux.sh" \
-            || docker run --rm -v "$PWD":/src -w /src \
-            termux/termux-docker:latest bash -c \
-            "pkg update -y >/dev/null && pkg install -y clang make >/dev/null && bash scripts/build-termux.sh"
+          for img in ghcr.io/termux/termux-docker:latest termux/termux-docker:latest; do
+            if timeout 120 docker pull "$img" >/dev/null 2>&1; then
+              echo "image=$img" >> "$GITHUB_OUTPUT"
+              echo "using $img"
+              exit 0
+            fi
+          done
+          echo "no Termux docker image available on this runner - skipping native build"
+          echo "image=" >> "$GITHUB_OUTPUT"
+      - name: build inside Termux
+        if: steps.image.outputs.image != ''
+        run: |
+          docker run --rm -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" bash -c \
+            "pkg update -y >/dev/null 2>&1; pkg install -y clang make >/dev/null 2>&1; bash scripts/build-termux.sh --package"
       - name: run the unit tests inside Termux
+        if: steps.image.outputs.image != ''
         run: |
-          docker run --rm -v "$PWD":/src -w /src \
-            ghcr.io/termux/termux-docker:latest bash -c "./build/astra-test && ./build/astra version" \
-            || true
+          docker run --rm -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" bash -c \
+            "make -j2 build/astra-test && ./build/astra-test && ./build/astra version"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

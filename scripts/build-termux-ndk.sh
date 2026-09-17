@@ -27,14 +27,18 @@ echo "cross compiling astra $VERSION (aarch64-linux-android$API) with the NDK"
 mkdir -p build dist
 CFLAGS="-O2 -std=gnu11 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -Isrc"
 
-# Prefer a fully static binary (no runtime surprises on device), fall back to
-# dynamic linking against Android's bionic.
-if $CC $CFLAGS -static src/*.c -o build/astra-android -lm -lpthread 2>/dev/null; then
+# NOTE: Android/bionic has no separate -lpthread, it lives in libc (NDK r21+).
+# Prefer a fully static binary (no runtime surprises on device); fall back to
+# dynamic linking against Android's bionic when that is not possible.
+STATIC_LOG="$(mktemp)"
+if $CC $CFLAGS -static src/*.c -o build/astra-android -lm 2>"$STATIC_LOG"; then
   echo "linked statically"
 else
-  echo "static link failed, falling back to dynamic"
-  $CC $CFLAGS src/*.c -o build/astra-android -lm -lpthread
+  echo "static link failed, falling back to dynamic:"
+  head -5 "$STATIC_LOG" | sed 's/^/  /'
+  $CC $CFLAGS src/*.c -o build/astra-android -lm
 fi
+rm -f "$STATIC_LOG"
 "$STRIP" build/astra-android 2>/dev/null || true
 cp build/astra-android dist/astra
 chmod +x dist/astra

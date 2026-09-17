@@ -152,13 +152,8 @@ static int engine_launch_once(const astra_config *cfg, engine_t *eng, int force_
     if (cfg->profile_dir[0]) {
         snprintf(eng->profile, sizeof(eng->profile), "%s", cfg->profile_dir);
     } else {
-        char tmpl[] = "/tmp/astra-profile-XXXXXX";
-        const char *tmp = getenv("TMPDIR");
         char buf[512];
-        if (tmp)
-            snprintf(buf, sizeof(buf), "%s/astra-profile-XXXXXX", tmp);
-        else
-            snprintf(buf, sizeof(buf), "%s", tmpl);
+        snprintf(buf, sizeof(buf), "%s/astra-profile-XXXXXX", astra_tmpdir());
         char *d = mkdtemp(buf);
         if (!d) {
             LOGE("mkdtemp failed: %s", strerror(errno));

@@ -640,11 +640,18 @@ void path_join(char *out, size_t n, const char *a, const char *b) {
         snprintf(out, n, "%s/%s", a, b ? b : "");
 }
 
+const char *astra_tmpdir(void) {
+    const char *d = getenv("TMPDIR");
+    if (d && *d && access(d, W_OK) == 0) return d;
+    if (access("/tmp", W_OK) == 0) return "/tmp";
+    return ".";
+}
+
 char *expand_home(const char *path) {
     if (!path) return NULL;
     if (path[0] == '~' && (path[1] == '/' || path[1] == 0)) {
         const char *home = getenv("HOME");
-        if (!home) home = "/tmp";
+        if (!home) home = astra_tmpdir();
         char *out = (char *)malloc(strlen(home) + strlen(path) + 2);
         snprintf(out, strlen(home) + strlen(path) + 2, "%s%s", home, path + 1);
         return out;

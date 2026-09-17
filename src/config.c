@@ -58,7 +58,7 @@ void config_defaults(astra_config *cfg) {
     cfg->cache_max_bytes = (size_t)256 * 1024 * 1024;
     cfg->log_level = L_INFO;
     const char *home = getenv("HOME");
-    if (!home) home = "/tmp";
+    if (!home) home = astra_tmpdir();
     snprintf(cfg->cache_dir, sizeof(cfg->cache_dir), "%s/.cache/astra", home);
     snprintf(cfg->profile_dir, sizeof(cfg->profile_dir), "%s/.config/astra/profile", home);
 }

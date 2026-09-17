@@ -289,7 +289,9 @@ static void test_image(void) {
 /* ----------------------------------------------------------------- cache */
 
 static void test_cache(void) {
-    const char *dir = "/tmp/astra-test-cache";
+    /* not /tmp: android has none, and TMPDIR is where it says they go */
+    char dir[512];
+    snprintf(dir, sizeof(dir), "%s/astra-test-cache", astra_tmpdir());
     rm_rf(dir);
     cache_t c;
     CHECK(cache_init(&c, dir, 4096) == 0, "cache init");
@@ -438,7 +440,8 @@ static void test_config(void) {
     CHECK(parse_bool("on", 0) == 1 && parse_bool("off", 1) == 0, "parse_bool");
     CHECK(parse_size("256M", 0) == 256 * 1024 * 1024, "parse_size MB");
     CHECK(parse_size("8k", 0) == 8192, "parse_size k");
-    const char *tmp = "/tmp/astra-test.conf";
+    char tmp[512];
+    snprintf(tmp, sizeof(tmp), "%s/astra-test.conf", astra_tmpdir());
     file_write(tmp, "lite = off\nport = 9333\nmax-image-width = 800\n",
                strlen("lite = off\nport = 9333\nmax-image-width = 800\n"));
     CHECK(config_load_file(&cfg, tmp) == 0, "config load");

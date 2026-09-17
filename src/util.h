@@ -93,4 +93,9 @@ void path_join(char *out, size_t n, const char *a, const char *b);
 char *expand_home(const char *path); /* malloc'd */
 int rm_rf(const char *path);
 
+/* Directory for temporary files.  Android has no /tmp, so honour TMPDIR first
+ * and only use /tmp when it is really there - a hardcoded /tmp breaks every
+ * test and every temporary profile dir on a phone. */
+const char *astra_tmpdir(void);
+
 #endif /* ASTRA_UTIL_H */

@@ -154,6 +154,13 @@ if command -v go >/dev/null 2>&1; then
   # go-rod's websocket client sends a placeholder Sec-WebSocket-Key, which the
   # node based sniffer refuses; tests/e2e/cdp_proxy.py accepts any key and logs
   # every message in both directions.
+  # First the realistic case: the same astra instance the puppeteer suite just
+  # used.  State a client leaves behind (auto-attach with waitForDebuggerOnStart
+  # for one) must not break the next client - that is what hung MustPage here.
+  ( cd tests/e2e/gorod && go mod tidy >/dev/null 2>&1; \
+    ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL="$TEST_URL" \
+    timeout "$STEP_TIMEOUT" go test -timeout 300s -v ./... ) || rc=1
+
   # Its own astra at trace level: a stalled navigation is invisible from the
   # client side, so log every message astra exchanges with the engine too.
   ./build/astra serve --engine "$ENGINE" --port "$GOROD_PORT" --log-level 4 \

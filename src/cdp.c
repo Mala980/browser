@@ -255,6 +255,15 @@ static session_t *session_new(conn_t *client, const char *engine_id, const char 
 }
 
 /* enable what astra itself needs on a freshly attached session */
+static void engine_cmd(const char *session, const char *method) {
+    json_t *m = jobj();
+    jset(m, "id", jnum((double)++S.next_id));
+    jset(m, "method", jstr(method));
+    jset(m, "sessionId", jstr(session));
+    send_json_to(S.engine, m);
+    json_free(m);
+}
+
 static void session_init(const char *engine_session) {
     if (!engine_session || !S.engine) return;
     if (S.cfg->lite) {
@@ -275,13 +284,13 @@ static void session_init(const char *engine_session) {
         json_free(m);
     }
     /* keep network events flowing (harmless if the client also enables it) */
-    int id = ++S.next_id;
-    json_t *m = jobj();
-    jset(m, "id", jnum((double)id));
-    jset(m, "method", jstr("Network.enable"));
-    jset(m, "sessionId", jstr(engine_session));
-    send_json_to(S.engine, m);
-    json_free(m);
+    engine_cmd(engine_session, "Network.enable");
+    /* Astra forwards a client's Target.setAutoAttach, waitForDebuggerOnStart
+     * included, so Chrome can be holding a fresh page for a debugger that is
+     * never coming: puppeteer releases the pause itself, go-rod does not, and a
+     * page left waiting never issues a request - Page.navigate is not even
+     * answered.  The session is astra's, so astra releases it. */
+    engine_cmd(engine_session, "Runtime.runIfWaitingForDebugger");
 }
 
 /* ----------------------------------------------------------------- pending */

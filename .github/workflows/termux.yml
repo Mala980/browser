@@ -69,11 +69,15 @@ jobs:
       - name: build inside Termux
         if: steps.image.outputs.image != ''
         run: |
-          set -o pipefail
+          set +e
           docker run --rm -v "$PWD":/src -w /src "${{ steps.image.outputs.image }}" \
-            bash .github/termux-native-build.sh 2>&1 | tee /tmp/termux-native.log
+            /bin/sh -c 'command -v bash >/dev/null && exec bash .github/termux-native-build.sh || sh .github/termux-native-build.sh' \
+            2>&1 | tee /tmp/termux-native.log
+          rc=${PIPESTATUS[0]}
+          echo "docker exit status: $rc"
+          exit "$rc"
       - name: publish log
-        if: steps.image.outputs.image != ''
+        if: always()
         run: bash .github/publish-log.sh termux-native /tmp/termux-native.log
       - uses: actions/upload-artifact@v4
         if: always()

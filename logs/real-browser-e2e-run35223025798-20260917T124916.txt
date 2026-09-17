@@ -1,0 +1,531 @@
+engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome
+
+=== generate test assets ===
+generating png assets
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-1.png (3685096 bytes)
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-2.png (2682410 bytes)
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-3.png (1836742 bytes)
+generating video asset
+total 8160
+-rw-r--r-- 1 runner runner   22764 Sep 17 12:47 clip.mp4
+-rw-r--r-- 1 runner runner  119453 Sep 17 12:47 clip.webm
+-rw-r--r-- 1 runner runner 3685096 Sep 17 12:47 photo-1.png
+-rw-r--r-- 1 runner runner 2682410 Sep 17 12:47 photo-2.png
+-rw-r--r-- 1 runner runner 1836742 Sep 17 12:47 photo-3.png
+
+=== serve test site on :8123 ===
+
+=== install node dependencies ===
+
+=== control experiment: puppeteer straight to the engine (no astra) ===
+direct connect probe: ws://127.0.0.1:9333/devtools/browser/3378b3b4-aa8a-42db-a126-17c63bfa896d
+  connected: Chrome/153.0.8010.47
+  title: Astra test page
+  image widths: [2400,2000,1600]
+  direct probe OK
+
+=== cdp trace: puppeteer straight to the engine (control, 60s) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9222
+  page : http://127.0.0.1:8123/index.html
+  connected, Chrome/153.0.8010.47
+  ok   page.goto + load event
+    (skipped: mock engine has no DOM)
+  ok   images are decoded and painted (chromium parity)
+    (skipped: mock engine has no DOM)
+  ok   video element plays (currentTime advances)
+    (skipped: mock engine has no JS realms)
+  ok   javascript execution / Runtime.evaluate
+  ok   screenshot through astra produces a real png
+    (skipped: mock engine has no DOM)
+  ok   rendering smoothness probe (rAF frame pacing)
+  FAIL astra stats exposed over CDP: Protocol error (Astra.getStats): 'Astra.getStats' wasn't found
+    (skipped: needs a real network stack)
+  ok   cache hit on second navigation
+  ok   no uncaught page errors
+    (skipped: mock engine has no JS realms)
+  ok   multiple pages / targets
+
+10 checks, 1 failed
+  failed: astra stats exposed over CDP
+  (traced direct run did not finish)
+
+=== start astra (headless) ===
+
+=== puppeteer (headless mode) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9222
+  page : http://127.0.0.1:8123/index.html
+  connected, Chrome/153.0.8010.47
+  ok   page.goto + load event
+  ok   images are decoded and painted (chromium parity)
+  ok   video element plays (currentTime advances)
+  ok   javascript execution / Runtime.evaluate
+  ok   screenshot through astra produces a real png
+    measured 61.6 fps (software rasterizer in CI)
+  ok   rendering smoothness probe (rAF frame pacing)
+    7 requests, original 8325052 B, delivered 1721762 B, saved 79.3%
+  ok   astra stats exposed over CDP
+    after reload: cacheHits=4, delivered=119453 B, saved 100.0%
+  ok   cache hit on second navigation
+  ok   no uncaught page errors
+  ok   multiple pages / targets
+
+10 checks, 0 failed
+
+=== cdp trace: puppeteer through astra (60s) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9222
+  page : http://127.0.0.1:8123/index.html
+  connected, Chrome/153.0.8010.47
+  ok   page.goto + load event
+    (skipped: mock engine has no DOM)
+  ok   images are decoded and painted (chromium parity)
+    (skipped: mock engine has no DOM)
+  ok   video element plays (currentTime advances)
+    (skipped: mock engine has no JS realms)
+  ok   javascript execution / Runtime.evaluate
+  ok   screenshot through astra produces a real png
+    (skipped: mock engine has no DOM)
+  ok   rendering smoothness probe (rAF frame pacing)
+    astra domain answers on a page session (version 0.1.0); request counters need a real engine
+  ok   astra stats exposed over CDP
+    (skipped: needs a real network stack)
+  ok   cache hit on second navigation
+  ok   no uncaught page errors
+    (skipped: mock engine has no JS realms)
+  ok   multiple pages / targets
+
+10 checks, 0 failed
+
+=== go-rod ===
+=== RUN   TestAstraGoRod
+--- FAIL: TestAstraGoRod (60.06s)
+panic: context deadline exceeded [recovered]
+	panic: context deadline exceeded
+
+goroutine 19 [running]:
+testing.tRunner.func1.2({0x821e00, 0xe8c240})
+	/opt/hostedtoolcache/go/1.22.12/x64/src/testing/testing.go:1631 +0x24a
+testing.tRunner.func1()
+	/opt/hostedtoolcache/go/1.22.12/x64/src/testing/testing.go:1634 +0x377
+panic({0x821e00?, 0xe8c240?})
+	/opt/hostedtoolcache/go/1.22.12/x64/src/runtime/panic.go:770 +0x132
+github.com/go-rod/rod/lib/utils.init.func2({0x821e00?, 0xe8c240?})
+	/home/runner/go/pkg/mod/github.com/go-rod/rod@v0.116.2/lib/utils/utils.go:68 +0x1d
+github.com/mala980/browser/tests/e2e/gorod.TestAstraGoRod.New.(*Browser).WithPanic.genE.func7({0xc000119090?, 0x20?, 0x0?})
+	/home/runner/go/pkg/mod/github.com/go-rod/rod@v0.116.2/must.go:36 +0x62
+github.com/go-rod/rod.(*Browser).MustPage(0xc00014c5a0, {0xc0001c7f48?, 0x0?, 0x0?})
+	/home/runner/go/pkg/mod/github.com/go-rod/rod@v0.116.2/must.go:71 +0xd2
+github.com/mala980/browser/tests/e2e/gorod.TestAstraGoRod(0xc000152820)
+	/home/runner/work/browser/browser/tests/e2e/gorod/astra_test.go:87 +0x36c
+testing.tRunner(0xc000152820, 0xb34c80)
+	/opt/hostedtoolcache/go/1.22.12/x64/src/testing/testing.go:1689 +0xfb
+created by testing.(*T).Run in goroutine 1
+	/opt/hostedtoolcache/go/1.22.12/x64/src/testing/testing.go:1742 +0x390
+FAIL	github.com/mala980/browser/tests/e2e/gorod	60.066s
+FAIL
+  last CDP messages seen by go-rod:
+14327ms CLI->ENG Target.setDiscoverTargets id=1 sid=-
+14328ms ENG->CLI response id=1
+14328ms CLI->ENG Target.createTarget id=2 sid=-
+14342ms ENG->CLI Target.attachedToTarget id=- sid=-
+14342ms ENG->CLI Target.targetCreated id=- sid=-
+14348ms ENG->CLI response id=2
+14352ms ENG->CLI Target.targetInfoChanged id=- sid=-
+14383ms CLI->ENG Target.attachToTarget id=3 sid=-
+14385ms ENG->CLI Target.targetInfoChanged id=- sid=-
+14385ms ENG->CLI Target.attachedToTarget id=- sid=-
+14385ms ENG->CLI response id=3
+14426ms CLI->ENG Emulation.setDeviceMetricsOverride id=4 sid=astra-session-18
+14427ms ENG->CLI response id=4 sid=astra-session-18
+14428ms CLI->ENG Emulation.setTouchEmulationEnabled id=5 sid=astra-session-18
+14428ms ENG->CLI response id=5 sid=astra-session-18
+14428ms CLI->ENG Network.setUserAgentOverride id=6 sid=astra-session-18
+14429ms ENG->CLI response id=6 sid=astra-session-18
+14429ms CLI->ENG Page.enable id=7 sid=astra-session-18
+14429ms ENG->CLI response id=7 sid=astra-session-18
+14429ms CLI->ENG Page.stopLoading id=8 sid=astra-session-18
+14430ms ENG->CLI response id=8 sid=astra-session-18
+14430ms CLI->ENG Page.navigate id=9 sid=astra-session-18
+14430ms ENG->CLI Page.frameStartedNavigating id=- sid=astra-session-18
+14431ms ENG->CLI Page.frameStartedLoading id=- sid=astra-session-18
+74384ms CLI->ENG Target.closeTarget id=10 sid=-
+74384ms CLI->ENG Browser.close id=11 sid=-
+  astra log tail (unanswered commands show up as warnings):
+12:47:35.848 [INFO ] cache: /tmp/astra-e2e/cache (0 entries, 0.0 MB)
+12:47:35.881 [DEBUG] engine websocket connected (fd 3)
+12:47:35.881 [INFO ] astra control plane ready on http://127.0.0.1:9222  (ws: /devtools/browser/astra-4325)
+12:47:36.102 [DEBUG] http GET /json/version
+12:47:36.487 [DEBUG] http GET /json/version
+12:47:36.506 [DEBUG] websocket client connected (fd 5)
+12:47:36.515 [DEBUG] session astra-session-1 -> engine 9495EBC9594C338C0B7705E302495545 (target 1997BE364878B848AAEB796E7841E543)
+12:47:36.516 [DEBUG] session astra-session-2 -> engine 84B13C27C121E7A9E278A1E2073E8058 (target 62495228C853A4837FD4B8610620A4AE)
+12:47:36.516 [DEBUG] session astra-session-3 -> engine E89687B016AEB0648FEAD1B79B00D1E3 (target 665E8E4DCB513DC9EC1F90B28828A1F8)
+12:47:36.517 [DEBUG] session astra-session-4 -> engine 2861BBF91EE961083E1CFC8922C82505 (target D100F4C1BCC56686DD3219CB3C6574E5)
+12:47:36.517 [DEBUG] session astra-session-5 -> engine AE26BD94FCF48F0FADBF92AAA6BF38AD (target 9F08F477839FFC81F062D1CE8ECEE11E)
+12:47:36.518 [DEBUG] session astra-session-6 -> engine 2C873AB93461A4E4696C46717FDC045F (target 2748189F67662948E063921C6C33FA17)
+12:47:36.523 [DEBUG] session astra-session-7 -> engine 052C069537F5E6D4EF2D354A36707D3D (target E00C1D69F55864451FBAE8B09EA68E17)
+12:47:36.525 [DEBUG] session astra-session-8 -> engine DA208B6871CAD62075CD00C5C2A741F1 (target BAFE8C350310C709CA045E0E64436966)
+12:47:36.540 [DEBUG] session astra-session-9 -> engine 5ED5E47112FD870CC3EA74E9B39BE818 (target AE480B97DC15AB56999F792E9258546E)
+12:47:36.573 [DEBUG] session astra-session-10 -> engine CF59A3FAE500FD5C4A9D32AC3835BBA1 (target 188E94708534817A23CA38F6E668D25B)
+12:47:36.911 [DEBUG] image http://127.0.0.1:8123/assets/photo-3.png: 1836742 -> 581109 B (1600x1200 -> 1280x960)
+12:47:37.146 [DEBUG] image http://127.0.0.1:8123/assets/photo-1.png: 3685096 -> 483877 B (2400x1600 -> 1280x853)
+12:47:37.320 [DEBUG] image http://127.0.0.1:8123/assets/photo-2.png: 2682410 -> 535972 B (2000x1400 -> 1280x896)
+12:47:40.553 [DEBUG] cache hit http://127.0.0.1:8123/index.html (1016 B)
+12:47:40.581 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-1.png (483877 B)
+12:47:40.593 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-2.png (535972 B)
+12:47:40.607 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-3.png (581109 B)
+12:47:40.647 [DEBUG] session astra-session-11 -> engine 393423792D8DE53AE49EDC4864B6CD23 (target 11ED5ED0813D22C03025F4E4D73C1773)
+12:47:40.658 [DEBUG] session astra-session-12 -> engine 7F1205535366940B4129939392EBEF8C (target C9374855A888232C1CFE8D9F5C8D3ECC)
+12:47:40.741 [DEBUG] http GET /json/version
+12:47:41.962 [DEBUG] websocket client connected (fd 5)
+12:47:41.977 [DEBUG] session astra-session-13 -> engine 664AB3B0096412F75D0F7F0E7FA8E217 (target 5D490A928AF21408D51D2154292A6906)
+12:47:41.989 [DEBUG] session astra-session-14 -> engine BAB9B8C795BF9D195C231E5A312C74C6 (target 578D80CA53A666778B8C197324A3BF8C)
+12:47:42.028 [DEBUG] cache hit http://127.0.0.1:8123/index.html (1016 B)
+12:47:42.057 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-1.png (483877 B)
+12:47:42.066 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-2.png (535972 B)
+12:47:42.082 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-3.png (581109 B)
+12:47:42.332 [DEBUG] session astra-session-15 -> engine 40CF4531D9FAA3FF069CB5AB375284AE (target D3F8DD130647D6BFD2C835A058E935AC)
+12:47:42.342 [DEBUG] session astra-session-16 -> engine 5D09108B4E580B40970CB002B062BBCA (target 642B77C5B3B6DE74E0B9E7D00DF6758E)
+12:47:56.784 [DEBUG] websocket client connected (fd 5)
+12:47:56.796 [DEBUG] session astra-session-17 -> engine A13A2DA38DBC8DB907C1D1035240F8D4 (target 7308EF49603E7F6CBAB01D6C4EE39540)
+12:47:56.842 [DEBUG] session astra-session-18 -> engine 88348D3F0DB2605833609AA9882A7B21 (target 407634D92FA41489A3B738FBC4140978)
+12:48:06.903 [WARN ] engine did not answer Page.navigate (client id=9, engine id=176, session=astra-session-18) after 10.0s
+12:48:35.948 [INFO ] saved 100.0% so far (10 requests, 0 blocked, 8 cached)
+
+=== go-rod control: straight to Chrome (no astra) ===
+=== RUN   TestAstraGoRod
+    astra_test.go:83: connected to Chrome/153.0.8010.47
+=== RUN   TestAstraGoRod/title
+=== RUN   TestAstraGoRod/images_decoded
+    astra_test.go:100: cannot parse widths: invalid character '2' after array element
+=== RUN   TestAstraGoRod/video_plays
+    astra_test.go:127: video currentTime=2.00 videoWidth=640
+=== RUN   TestAstraGoRod/javascript
+=== RUN   TestAstraGoRod/screenshot
+    astra_test.go:147: screenshot: 639781 bytes
+=== RUN   TestAstraGoRod/astra_stats
+    astra_test.go:154: control run against the engine without astra
+--- FAIL: TestAstraGoRod (2.26s)
+    --- PASS: TestAstraGoRod/title (0.00s)
+    --- FAIL: TestAstraGoRod/images_decoded (0.00s)
+    --- PASS: TestAstraGoRod/video_plays (2.01s)
+    --- PASS: TestAstraGoRod/javascript (0.00s)
+    --- PASS: TestAstraGoRod/screenshot (0.09s)
+    --- SKIP: TestAstraGoRod/astra_stats (0.00s)
+FAIL
+FAIL	github.com/mala980/browser/tests/e2e/gorod	2.269s
+FAIL
+  (go-rod does not work with this Chrome build either)
+
+=== astra bench (real byte savings, lite on vs off) ===
+12:49:00.126 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+12:49:00.378 [ERROR] engine exited during startup (status 134). Try --no-sandbox or check ASTRA_ENGINE_LOG
+12:49:00.378 [WARN ] engine failed to start, retrying with --no-sandbox
+12:49:00.378 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+12:49:00.669 [INFO ] engine ready: Chrome/153.0.8010.47 on port 40047 (ws://127.0.0.1:40047/devtools/browser/bedc6858-725f-4260-9ee5-36bc6f456ea5)
+12:49:00.669 [INFO ] filters: 142 builtin rules active
+12:49:00.669 [INFO ] cache: /tmp/astra-e2e/cache-bench (0 entries, 0.0 MB)
+
+astra benchmark: http://127.0.0.1:8123/index.html
+  metric                      lite on     lite off        delta
+  requests                          5            6 +1
+  blocked (ads)                     0            0
+  images optimized                  3            0
+  bytes delivered             1721427            0
+  bytes over the wire         2381649      8325664
+  bytes (would be)            8324717            0
+
+  => lite mode moved 71.4% fewer bytes for the same page (2325.8 KB vs 8130.5 KB)
+
+
+=== start astra (full / windowed mode under Xvfb) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9223
+  page : http://127.0.0.1:8123/index.html
+  connected, Chrome/153.0.8010.47
+  ok   page.goto + load event
+  ok   images are decoded and painted (chromium parity)
+  ok   video element plays (currentTime advances)
+  ok   javascript execution / Runtime.evaluate
+  ok   screenshot through astra produces a real png
+    measured 61.3 fps (software rasterizer in CI)
+  ok   rendering smoothness probe (rAF frame pacing)
+    12 requests, original 8417820 B, delivered 1978366 B, saved 76.5%
+  ok   astra stats exposed over CDP
+    after reload: cacheHits=4, delivered=119453 B, saved 100.0%
+  ok   cache hit on second navigation
+  ok   no uncaught page errors
+  ok   multiple pages / targets
+
+10 checks, 0 failed
+
+=== cdp trace: puppeteer through astra (last 60 lines) ===
+  1529ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1536ms ENG->CLI response id=1
+  1536ms ENG->CLI response id=2
+  1536ms ENG->CLI response id=3
+  1536ms ENG->CLI response id=4
+  1537ms ENG->CLI response id=6
+  1537ms ENG->CLI response id=7
+  1537ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1537ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1537ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1537ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1537ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1537ms ENG->CLI response id=8
+  1538ms ENG->CLI Runtime.executionContextCreated id=- sid=astra-session-16
+  1538ms ENG->CLI response id=9
+  1538ms ENG->CLI response id=10
+  1538ms ENG->CLI response id=11
+  1538ms CLI->ENG Page.addScriptToEvaluateOnNewDocument id=12 sid=astra-session-16
+  1539ms ENG->CLI response id=12
+  1539ms CLI->ENG Page.createIsolatedWorld id=13 sid=astra-session-16
+  1541ms ENG->CLI Runtime.executionContextCreated id=- sid=astra-session-16
+  1541ms ENG->CLI response id=13
+  1541ms CLI->ENG Emulation.setDeviceMetricsOverride id=14 sid=astra-session-16
+  1541ms CLI->ENG Emulation.setTouchEmulationEnabled id=15 sid=astra-session-16
+  1542ms ENG->CLI Page.frameResized id=- sid=astra-session-16
+  1542ms ENG->CLI response id=14
+  1542ms ENG->CLI response id=15
+  1543ms CLI->ENG Page.navigate id=16 sid=astra-session-16
+  1544ms ENG->CLI Page.frameStartedNavigating id=- sid=astra-session-16
+  1544ms ENG->CLI Page.frameStartedLoading id=- sid=astra-session-16
+  1546ms ENG->CLI response id=16
+  1546ms ENG->CLI Runtime.executionContextsCleared id=- sid=astra-session-16
+  1550ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1550ms ENG->CLI Runtime.executionContextsCleared id=- sid=astra-session-16
+  1550ms ENG->CLI Page.frameNavigated id=- sid=astra-session-16
+  1551ms ENG->CLI Network.policyUpdated id=- sid=astra-session-16
+  1553ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1555ms ENG->CLI Runtime.executionContextCreated id=- sid=astra-session-16
+  1555ms ENG->CLI Runtime.executionContextCreated id=- sid=astra-session-16
+  1555ms ENG->CLI Page.domContentEventFired id=- sid=astra-session-16
+  1555ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1555ms ENG->CLI Page.loadEventFired id=- sid=astra-session-16
+  1555ms ENG->CLI Page.lifecycleEvent id=- sid=astra-session-16
+  1555ms ENG->CLI Page.frameStoppedLoading id=- sid=astra-session-16
+  1556ms CLI->ENG Target.closeTarget id=9 sid=-
+  1556ms ENG->CLI response id=9
+  1566ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1566ms ENG->CLI Target.detachedFromTarget id=- sid=astra-session-15
+  1566ms ENG->CLI Target.targetDestroyed id=- sid=-
+  1567ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1567ms ENG->CLI Target.detachedFromTarget id=- sid=-
+  1567ms ENG->CLI Target.targetDestroyed id=- sid=-
+  1569ms CLI->ENG Target.closeTarget id=10 sid=-
+  1569ms ENG->CLI response id=10
+  1579ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1579ms ENG->CLI Target.detachedFromTarget id=- sid=astra-session-13
+  1579ms ENG->CLI Target.targetDestroyed id=- sid=-
+  1580ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1580ms ENG->CLI Target.detachedFromTarget id=- sid=-
+  1580ms ENG->CLI Target.targetDestroyed id=- sid=-
+
+=== cdp trace: puppeteer straight to chrome (last 60 lines) ===
+  1613ms ENG->CLI response id=1
+  1613ms ENG->CLI response id=2
+  1613ms ENG->CLI response id=3
+  1613ms ENG->CLI response id=4
+  1614ms ENG->CLI response id=6
+  1614ms ENG->CLI response id=7
+  1614ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1614ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1614ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1614ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1614ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1614ms ENG->CLI response id=8
+  1614ms ENG->CLI Runtime.executionContextCreated id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1614ms ENG->CLI response id=9
+  1614ms ENG->CLI response id=10
+  1614ms ENG->CLI response id=11
+  1615ms CLI->ENG Page.addScriptToEvaluateOnNewDocument id=12 sid=85EB65074F996D588CE2F67CE1A05153
+  1615ms ENG->CLI response id=12
+  1615ms CLI->ENG Page.createIsolatedWorld id=13 sid=85EB65074F996D588CE2F67CE1A05153
+  1617ms ENG->CLI Runtime.executionContextCreated id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1617ms ENG->CLI response id=13
+  1617ms CLI->ENG Emulation.setDeviceMetricsOverride id=14 sid=85EB65074F996D588CE2F67CE1A05153
+  1617ms CLI->ENG Emulation.setTouchEmulationEnabled id=15 sid=85EB65074F996D588CE2F67CE1A05153
+  1618ms ENG->CLI Page.frameResized id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1618ms ENG->CLI response id=14
+  1619ms ENG->CLI response id=15
+  1619ms CLI->ENG Page.navigate id=16 sid=85EB65074F996D588CE2F67CE1A05153
+  1620ms ENG->CLI Page.frameStartedNavigating id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1621ms ENG->CLI Page.frameStartedLoading id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1622ms ENG->CLI response id=16
+  1623ms ENG->CLI Runtime.executionContextsCleared id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1626ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1626ms ENG->CLI Runtime.executionContextsCleared id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1626ms ENG->CLI Page.frameNavigated id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1627ms ENG->CLI Network.policyUpdated id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1629ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1631ms ENG->CLI Runtime.executionContextCreated id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1631ms ENG->CLI Runtime.executionContextCreated id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1631ms ENG->CLI Page.domContentEventFired id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1631ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1631ms ENG->CLI Page.loadEventFired id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1631ms ENG->CLI Page.lifecycleEvent id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1632ms ENG->CLI Page.frameStoppedLoading id=- sid=85EB65074F996D588CE2F67CE1A05153
+  1632ms CLI->ENG Target.closeTarget id=11 sid=-
+  1635ms ENG->CLI response id=11
+  1645ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1645ms ENG->CLI Target.detachedFromTarget id=- sid=219564F5E6B65FB5821E5CE4165056A7
+  1645ms ENG->CLI Target.targetDestroyed id=- sid=-
+  1645ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1645ms ENG->CLI Target.detachedFromTarget id=- sid=-
+  1645ms ENG->CLI Target.targetDestroyed id=- sid=-
+  1647ms CLI->ENG Target.closeTarget id=12 sid=-
+  1649ms ENG->CLI response id=12
+  1656ms ENG->CLI Target.detachedFromTarget id=- sid=13EB0B5707D2F5CFC58163A59A8F0DD4
+  1656ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1656ms ENG->CLI Target.detachedFromTarget id=- sid=-
+  1656ms ENG->CLI Target.targetDestroyed id=- sid=-
+  1657ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1657ms ENG->CLI Target.detachedFromTarget id=- sid=-
+  1657ms ENG->CLI Target.targetDestroyed id=- sid=-
+
+=== done ===
+artifacts in /tmp/astra-e2e
+== astra headless ==
+12:47:35.305 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+12:47:35.555 [ERROR] engine exited during startup (status 134). Try --no-sandbox or check ASTRA_ENGINE_LOG
+12:47:35.555 [WARN ] engine failed to start, retrying with --no-sandbox
+12:47:35.555 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+12:47:35.848 [INFO ] engine ready: Chrome/153.0.8010.47 on port 46329 (ws://127.0.0.1:46329/devtools/browser/ebf6185a-cd03-4f59-bf9c-c6e6fa30e1fa)
+12:47:35.848 [INFO ] filters: 142 builtin rules active
+12:47:35.848 [INFO ] cache: /tmp/astra-e2e/cache (0 entries, 0.0 MB)
+12:47:35.881 [DEBUG] engine websocket connected (fd 3)
+12:47:35.881 [INFO ] astra control plane ready on http://127.0.0.1:9222  (ws: /devtools/browser/astra-4325)
+12:47:36.102 [DEBUG] http GET /json/version
+12:47:36.487 [DEBUG] http GET /json/version
+12:47:36.506 [DEBUG] websocket client connected (fd 5)
+12:47:36.515 [DEBUG] session astra-session-1 -> engine 9495EBC9594C338C0B7705E302495545 (target 1997BE364878B848AAEB796E7841E543)
+12:47:36.516 [DEBUG] session astra-session-2 -> engine 84B13C27C121E7A9E278A1E2073E8058 (target 62495228C853A4837FD4B8610620A4AE)
+12:47:36.516 [DEBUG] session astra-session-3 -> engine E89687B016AEB0648FEAD1B79B00D1E3 (target 665E8E4DCB513DC9EC1F90B28828A1F8)
+12:47:36.517 [DEBUG] session astra-session-4 -> engine 2861BBF91EE961083E1CFC8922C82505 (target D100F4C1BCC56686DD3219CB3C6574E5)
+12:47:36.517 [DEBUG] session astra-session-5 -> engine AE26BD94FCF48F0FADBF92AAA6BF38AD (target 9F08F477839FFC81F062D1CE8ECEE11E)
+12:47:36.518 [DEBUG] session astra-session-6 -> engine 2C873AB93461A4E4696C46717FDC045F (target 2748189F67662948E063921C6C33FA17)
+12:47:36.523 [DEBUG] session astra-session-7 -> engine 052C069537F5E6D4EF2D354A36707D3D (target E00C1D69F55864451FBAE8B09EA68E17)
+12:47:36.525 [DEBUG] session astra-session-8 -> engine DA208B6871CAD62075CD00C5C2A741F1 (target BAFE8C350310C709CA045E0E64436966)
+12:47:36.540 [DEBUG] session astra-session-9 -> engine 5ED5E47112FD870CC3EA74E9B39BE818 (target AE480B97DC15AB56999F792E9258546E)
+12:47:36.573 [DEBUG] session astra-session-10 -> engine CF59A3FAE500FD5C4A9D32AC3835BBA1 (target 188E94708534817A23CA38F6E668D25B)
+12:47:36.911 [DEBUG] image http://127.0.0.1:8123/assets/photo-3.png: 1836742 -> 581109 B (1600x1200 -> 1280x960)
+12:47:37.146 [DEBUG] image http://127.0.0.1:8123/assets/photo-1.png: 3685096 -> 483877 B (2400x1600 -> 1280x853)
+12:47:37.320 [DEBUG] image http://127.0.0.1:8123/assets/photo-2.png: 2682410 -> 535972 B (2000x1400 -> 1280x896)
+12:47:40.553 [DEBUG] cache hit http://127.0.0.1:8123/index.html (1016 B)
+12:47:40.581 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-1.png (483877 B)
+12:47:40.593 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-2.png (535972 B)
+12:47:40.607 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-3.png (581109 B)
+12:47:40.647 [DEBUG] session astra-session-11 -> engine 393423792D8DE53AE49EDC4864B6CD23 (target 11ED5ED0813D22C03025F4E4D73C1773)
+12:47:40.658 [DEBUG] session astra-session-12 -> engine 7F1205535366940B4129939392EBEF8C (target C9374855A888232C1CFE8D9F5C8D3ECC)
+12:47:40.741 [DEBUG] http GET /json/version
+12:47:41.962 [DEBUG] websocket client connected (fd 5)
+12:47:41.977 [DEBUG] session astra-session-13 -> engine 664AB3B0096412F75D0F7F0E7FA8E217 (target 5D490A928AF21408D51D2154292A6906)
+12:47:41.989 [DEBUG] session astra-session-14 -> engine BAB9B8C795BF9D195C231E5A312C74C6 (target 578D80CA53A666778B8C197324A3BF8C)
+12:47:42.028 [DEBUG] cache hit http://127.0.0.1:8123/index.html (1016 B)
+12:47:42.057 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-1.png (483877 B)
+12:47:42.066 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-2.png (535972 B)
+12:47:42.082 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-3.png (581109 B)
+12:47:42.332 [DEBUG] session astra-session-15 -> engine 40CF4531D9FAA3FF069CB5AB375284AE (target D3F8DD130647D6BFD2C835A058E935AC)
+12:47:42.342 [DEBUG] session astra-session-16 -> engine 5D09108B4E580B40970CB002B062BBCA (target 642B77C5B3B6DE74E0B9E7D00DF6758E)
+12:47:56.784 [DEBUG] websocket client connected (fd 5)
+12:47:56.796 [DEBUG] session astra-session-17 -> engine A13A2DA38DBC8DB907C1D1035240F8D4 (target 7308EF49603E7F6CBAB01D6C4EE39540)
+12:47:56.842 [DEBUG] session astra-session-18 -> engine 88348D3F0DB2605833609AA9882A7B21 (target 407634D92FA41489A3B738FBC4140978)
+12:48:06.903 [WARN ] engine did not answer Page.navigate (client id=9, engine id=176, session=astra-session-18) after 10.0s
+12:48:35.948 [INFO ] saved 100.0% so far (10 requests, 0 blocked, 8 cached)
+
+--- astra bandwidth report -------------------------------
+ requests inspected : 10
+ blocked (ads)      : 0
+ cache hits         : 8 (revalidated 0)
+ images optimized   : 0
+ text minified      : 0
+ would download     : 3.28 MB
+ actually delivered : 233.31 KB
+ total saved        : 6.11 MB (100.0%)
+ cpu: image 0.0 ms, minify 0.0 ms
+---------------------------------------------------------
+== astra full ==
+12:49:08.001 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (windowed)
+12:49:08.252 [ERROR] engine exited during startup (status 133). Try --no-sandbox or check ASTRA_ENGINE_LOG
+12:49:08.252 [WARN ] engine failed to start, retrying with --no-sandbox
+12:49:08.252 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (windowed)
+12:49:11.305 [INFO ] engine ready: Chrome/153.0.8010.47 on port 43199 (ws://127.0.0.1:43199/devtools/browser/e2b76ea2-8fba-473e-8997-92e1a5c99c51)
+12:49:11.305 [INFO ] filters: 142 builtin rules active
+12:49:11.305 [INFO ] cache: /tmp/astra-e2e/cache-full (0 entries, 0.0 MB)
+12:49:11.324 [DEBUG] engine websocket connected (fd 3)
+12:49:11.324 [INFO ] astra control plane ready on http://127.0.0.1:9223  (ws: /devtools/browser/astra-7677)
+12:49:11.373 [DEBUG] http GET /json/version
+12:49:11.796 [DEBUG] http GET /json/version
+12:49:11.813 [DEBUG] websocket client connected (fd 5)
+12:49:11.825 [DEBUG] session astra-session-1 -> engine FB0A9FCE3386DE85BE69AB6CE1CC5AD7 (target 6F817464937ED103012141846D4F2A67)
+12:49:11.826 [DEBUG] session astra-session-2 -> engine E4C0F2C1DC137CB98EC234633D6384A8 (target C0922F575D43A1DF2D3D2C8CBBC5DE3F)
+12:49:11.826 [DEBUG] session astra-session-3 -> engine B756333DD2E625BAAC29F99EC4167C27 (target DBB59E292BFE42D08B05EAB7F6D22577)
+12:49:11.826 [DEBUG] session astra-session-4 -> engine 45E8CC3B84D34CF8334D1FBCE89E73D8 (target EFF56B516206DD585A6CE7EF98395093)
+12:49:11.827 [DEBUG] session astra-session-5 -> engine 2526889B441C7D19E86CF366FFDF8BDC (target E857A0671CAE2D1193B7176373E74541)
+12:49:11.827 [DEBUG] session astra-session-6 -> engine 56B39CD723B744E0920573C06C87237F (target DA7217291913B47C554172552608D54D)
+12:49:11.831 [DEBUG] session astra-session-7 -> engine EE5B3D3F1ED7CA3DB5BDBAB898C4AF47 (target DF1A2D2BAF5E6E15797C6631C32A2EF5)
+12:49:11.847 [DEBUG] session astra-session-8 -> engine CD2A1E58A143C89702E42394F9BEC875 (target D38D36E1838A2C37F95DE8DA46BD669C)
+12:49:11.879 [DEBUG] session astra-session-9 -> engine 9AFA53755267E760CFC478F360AAD283 (target 91BE0B8DDF8DCE15CD99C31D47CF0DFC)
+12:49:11.954 [DEBUG] session astra-session-10 -> engine DE58136FA590F53F0D2C8E127E891E10 (target 105EC46B3FECDF8C7479177630FBB043)
+12:49:12.234 [DEBUG] image http://127.0.0.1:8123/assets/photo-3.png: 1836742 -> 581109 B (1600x1200 -> 1280x960)
+12:49:12.444 [DEBUG] image http://127.0.0.1:8123/assets/photo-2.png: 2682410 -> 535972 B (2000x1400 -> 1280x896)
+12:49:12.656 [DEBUG] image http://127.0.0.1:8123/assets/photo-1.png: 3685096 -> 483877 B (2400x1600 -> 1280x853)
+12:49:16.266 [DEBUG] cache hit http://127.0.0.1:8123/index.html (1016 B)
+12:49:16.294 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-1.png (483877 B)
+12:49:16.302 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-2.png (535972 B)
+12:49:16.311 [DEBUG] cache hit http://127.0.0.1:8123/assets/photo-3.png (581109 B)
+12:49:16.373 [DEBUG] session astra-session-11 -> engine 4A80A5AAF3590B1974D8C40BF658283F (target 109E91B5EEA5AFFCBA3FD7C8C582A205)
+12:49:16.394 [DEBUG] session astra-session-12 -> engine A29696331C95027E988E9A54E2DFE233 (target D57F78C0B37935AD5DC9A0D10CEF22A2)
+== site ==
+127.0.0.1 - - [17/Sep/2026 12:47:21] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:27] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:27] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:27] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:27] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:27] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:27] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 12:47:27] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [17/Sep/2026 12:47:33] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:33] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:33] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:33] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:33] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:33] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 12:47:33] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [17/Sep/2026 12:47:36] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:36] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:36] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:36] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:36] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:47:37] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 12:47:37] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [17/Sep/2026 12:47:40] "GET /assets/clip.webm HTTP/1.1" 304 -
+127.0.0.1 - - [17/Sep/2026 12:47:42] "GET /assets/clip.webm HTTP/1.1" 304 -
+127.0.0.1 - - [17/Sep/2026 12:48:57] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:48:57] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:48:57] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:48:57] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:48:57] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:48:57] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 12:48:57] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [17/Sep/2026 12:49:00] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:00] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:00] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:00] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:00] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:03] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 12:49:03] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [17/Sep/2026 12:49:03] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:03] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:03] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:03] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:03] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:11] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:12] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:12] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:12] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:12] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 12:49:12] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 12:49:12] "GET /favicon.ico HTTP/1.1" 404 -

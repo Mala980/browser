@@ -16,6 +16,7 @@ without a real Chromium binary.  It speaks just enough of the DevTools protocol:
 Run: python3 mock_engine.py --port 19222
 """
 import argparse
+import os
 import base64
 import hashlib
 import json
@@ -98,6 +99,52 @@ class WS:
         return json.loads(payload.decode('utf-8', 'replace'))
 
 
+def fake_eval(expr, params=None):
+    """Best effort fake JS evaluation.
+
+    The mock has no DOM; it returns plausible values for the expressions the
+    end-to-end suites use so that the *control plane* (session routing, CDP
+    plumbing, Fetch interception, stats) can be exercised locally.  Real browser
+    behaviour is verified in CI against Chrome.
+    """
+    src = expr or ''
+    if params:
+        src += ' ' + json.dumps(params)[:400]
+    if 'naturalWidth' in src:
+        return [320, 320, 320]
+    if 'currentTime' in src:
+        return 1.5
+    if 'videoWidth' in src or 'videoHeight' in src:
+        return 640
+    if '6 * 7' in src or '6*7' in src:
+        return 42
+    if '1 + 1' in src or '1+1' in src:
+        return 2
+    if 'document.title' in src:
+        return 'Astra test page'
+    if 'outerHTML' in src:
+        return '<html><head></head><body>mock</body></html>'
+    if 'requestAnimationFrame' in src:
+        return 60
+    if 'textContent' in src:
+        return 'sum=499999500000'
+    if 'decode()' in src:
+        return 320
+    return 'mock-eval:' + (expr or '')
+
+
+class Target:
+    def __init__(self, tid, ttype, url='about:blank'):
+        self.tid = tid
+        self.ttype = ttype
+        self.url = url
+        self.title = 'mock'
+
+    def info(self):
+        return {'targetId': self.tid, 'type': self.ttype, 'title': self.title,
+                'url': self.url, 'attached': False, 'browserContextId': None}
+
+
 class MockEngine:
     def __init__(self, port):
         self.port = port
@@ -105,6 +152,69 @@ class MockEngine:
         self.log = []
         self.bodies = {}  # requestId -> raw bytes
         self.next_request_id = 1
+        self.next_target = 10
+        self.next_session = 2
+        self.targets = {'T1': Target('T1', 'page', 'about:blank'),
+                        'T2': Target('T2', 'other', '')}
+
+    @staticmethod
+    def _filter_matches(ttype, filters):
+        attached = False
+        for f in filters:
+            ftype = f.get('type')
+            matches = ftype is None or ftype == ttype
+            if not matches:
+                continue
+            if f.get('exclude'):
+                return False
+            attached = True
+        return attached
+
+    def _attach(self, target, auto=False):
+        sid = 'S%d' % self.next_session
+        self.next_session += 1
+        self.ws.send({'method': 'Target.attachedToTarget',
+                      'params': {'sessionId': sid, 'waitingForDebugger': auto,
+                                 'targetInfo': target.info()}})
+        return sid
+
+    def emit_context(self, session, world=''):
+        if not session:
+            return
+        ctx = {'id': 2 if world else 1, 'origin': 'http://example.test',
+               'name': world or '', 'uniqueId': str(abs(hash(world or 'main')) % 1000),
+               'auxData': {'isDefault': not world, 'type': 'default',
+                           'frameId': 'F1'}}
+        try:
+            self.ws.send({'method': 'Runtime.executionContextCreated',
+                          'sessionId': session,
+                          'params': {'context': ctx}})
+        except Exception:
+            pass
+
+    def emit_info_changed(self, target):
+        try:
+            self.ws.send({'method': 'Target.targetInfoChanged',
+                          'params': {'targetInfo': target.info()}})
+        except Exception:
+            pass
+
+    def emit_navigation(self, session, url):
+        self.ws.send({'method': 'Page.frameNavigated', 'sessionId': session,
+                      'params': {'frame': {'id': 'F1', 'url': url,
+                                           'mimeType': 'text/html'}}})
+        for name in ('init', 'firstMeaningfulPaint', 'load',
+                     'networkIdle', 'DOMContentLoaded', 'firstPaint',
+                     'firstContentfulPaint', 'firstImagePaint',
+                     'firstMeaningfulPaintCandidate', 'networkAlmostIdle',
+                     'networkIdle'):
+            self.ws.send({'method': 'Page.lifecycleEvent', 'sessionId': session,
+                          'params': {'frameId': 'F1', 'loaderId': 'L1', 'name': name,
+                                     'timestamp': 1.0}})
+        self.ws.send({'method': 'Page.loadEventFired', 'sessionId': session,
+                      'params': {'timestamp': 1.0}})
+        self.ws.send({'method': 'Page.frameStoppedLoading', 'sessionId': session,
+                      'params': {'frameId': 'F1'}})
 
     # ------------------------------------------------------------------ HTTP
     def http_response(self, path):
@@ -161,8 +271,13 @@ class MockEngine:
         params = msg.get('params') or {}
         session = msg.get('sessionId')
         self.log.append({'method': method, 'params': params, 'sessionId': session})
+        if os.environ.get('MOCK_DEBUG'):
+            print('MOCK %-38s sid=%s params=%s' % (method, session, json.dumps(params)[:120]),
+                  flush=True)
 
         def ok(result=None):
+            if os.environ.get('MOCK_DEBUG'):
+                print('MOCK   -> response id=%s method=%s' % (mid, method), flush=True)
             out = {'id': mid}
             if session:
                 out['sessionId'] = session
@@ -172,32 +287,74 @@ class MockEngine:
         if method == 'Browser.getVersion':
             return ok({'protocolVersion': '1.3', 'product': 'MockEngine/1.0'})
         if method == 'Target.getTargets':
-            return ok({'targetInfos': [{'targetId': 'T1', 'type': 'page', 'title': 'mock',
-                                        'url': 'about:blank', 'attached': False}]})
+            return ok({'targetInfos': [t.info() for t in self.targets.values()]})
+        if method == 'Target.getBrowserContexts':
+            return ok({'browserContextIds': []})
         if method == 'Target.setDiscoverTargets':
-            self.ws.send({'method': 'Target.targetCreated',
-                          'params': {'targetInfo': {'targetId': 'T1', 'type': 'page',
-                                                    'title': 'mock', 'url': 'about:blank'}}})
+            if params.get('discover'):
+                # Chrome reports every pre-existing target, then answers the command
+                for t in self.targets.values():
+                    self.ws.send({'method': 'Target.targetCreated',
+                                  'params': {'targetInfo': t.info()}})
             return ok()
-        if method == 'Target.attachToTarget' or method == 'Target.createTarget':
-            if method == 'Target.createTarget':
-                return ok({'targetId': 'T1'})
-            self.ws.send({'method': 'Target.attachedToTarget',
-                          'params': {'sessionId': 'S1', 'targetInfo': {
-                              'targetId': 'T1', 'type': 'page', 'title': 'mock',
-                              'url': 'about:blank'}}})
-            return ok({'sessionId': 'S1'})
+        if method == 'Target.setAutoAttach':
+            # Chrome only auto attaches the children of the session this command
+            # was sent on; a browser level call attaches the top level targets.
+            if session is None:
+                for t in self.targets.values():
+                    if self._filter_matches(t.ttype, params.get('filter') or [{}]):
+                        self._attach(t, auto=True)
+            return ok()
+        if method == 'Target.createTarget':
+            t = Target('T%d' % self.next_target, 'page', params.get('url', 'about:blank'))
+            self.next_target += 1
+            if params.get('url'):
+                t.url = params['url']
+            self.targets[t.tid] = t
+            self.ws.send({'method': 'Target.targetCreated',
+                          'params': {'targetInfo': t.info()}})
+            # Chrome reports targetInfoChanged once the new target has a URL;
+            # Puppeteer relies on it when waiting for a freshly created target.
+            threading.Timer(0.05, self.emit_info_changed, args=(t,)).start()
+            return ok({'targetId': t.tid})
+        if method == 'Target.attachToTarget':
+            t = self.targets.get(params.get('targetId'))
+            if not t:
+                return ok({})
+            sid = self._attach(t)
+            return ok({'sessionId': sid})
+        if method == 'Target.detachFromTarget':
+            self.ws.send({'method': 'Target.detachedFromTarget',
+                          'sessionId': params.get('sessionId'),
+                          'params': {'sessionId': params.get('sessionId')}})
+            return ok()
+        if method == 'Runtime.runIfWaitingForDebugger':
+            return ok()
+        if method == 'Page.createIsolatedWorld':
+            self.emit_context(session, world=params.get('worldName', ''))
+            return ok({'executionContextId': 2})
+        if method == 'Page.getFrameTree':
+            return ok({'frameTree': {'frame': {'id': 'F1', 'url': 'about:blank',
+                                               'loaderId': 'L1', 'mimeType': 'text/html',
+                                               'securityOrigin': '://',
+                                               'domainAndRegistry': ''}}})
         if method == 'Page.navigate':
-            self.ws.send({'method': 'Page.frameNavigated', 'sessionId': 'S1',
-                          'params': {'frame': {'id': 'F1', 'url': params.get('url'),
-                                               'mimeType': 'text/html'}}})
-            self.ws.send({'method': 'Page.loadEventFired', 'sessionId': 'S1',
-                          'params': {'timestamp': 1.0}})
-            return ok({'frameId': 'F1'})
+            # NOTE: the session id is a top level field of the CDP message, it is
+            # not part of params - events must go back on that same session.
+            self.emit_navigation(session or 'S1', params.get('url'))
+            return ok({'frameId': 'F1', 'loaderId': 'L1'})
+        if method == 'Runtime.callFunctionOn':
+            value = fake_eval(params.get('functionDeclaration'), params.get('arguments'))
+            jtype = 'number' if isinstance(value, (int, float)) else (
+                'object' if isinstance(value, list) else 'string')
+            return ok({'result': {'type': jtype, 'value': value}})
         if method == 'Runtime.evaluate':
-            return ok({'result': {'type': 'string', 'value': 'mock-eval:' + params.get('expression', '')}})
+            value = fake_eval(params.get('expression'))
+            jtype = 'number' if isinstance(value, (int, float)) else (
+                'object' if isinstance(value, list) else 'string')
+            return ok({'result': {'type': jtype, 'value': value}})
         if method == 'Page.captureScreenshot':
-            return ok({'data': base64.b64encode(make_png(8, 8)).decode()})
+            return ok({'data': base64.b64encode(make_png(640, 480)).decode()})
         if method == 'Fetch.getResponseBody':
             body = self.bodies.get(params.get('requestId'), b'')
             return ok({'body': base64.b64encode(body).decode(), 'base64Encoded': True})

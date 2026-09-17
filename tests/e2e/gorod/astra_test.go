@@ -44,6 +44,19 @@ func endpoint(t *testing.T) string {
 	return info.WebSocketDebuggerURL
 }
 
+// evalNumber evaluates JS and parses the result, independent of the gson API.
+func evalNumber(t *testing.T, page *rod.Page, expr string) float64 {
+	t.Helper()
+	var v float64
+	raw := page.MustEval(expr).Raw()
+	if err := json.Unmarshal([]byte(raw), &v); err != nil {
+		var s string
+		_ = json.Unmarshal([]byte(raw), &s)
+		t.Fatalf("cannot parse %q from %s: %v", raw, expr, err)
+	}
+	return v
+}
+
 func testURL() string {
 	if u := os.Getenv("TEST_URL"); u != "" {
 		return u
@@ -88,11 +101,11 @@ func TestAstraGoRod(t *testing.T) {
 		}
 		page.MustEval(`() => { const v = document.getElementById('vid'); v.muted = true; v.currentTime = 0; return v.play(); }`)
 		time.Sleep(2 * time.Second)
-		ct := page.MustEval(`() => document.getElementById('vid').currentTime`).Float()
+		ct := evalNumber(t, page, `() => document.getElementById('vid').currentTime`)
 		if ct <= 0.3 {
 			t.Fatalf("video did not advance: currentTime=%v", ct)
 		}
-		vw := page.MustEval(`() => document.getElementById('vid').videoWidth`).Int()
+		vw := evalNumber(t, page, `() => document.getElementById('vid').videoWidth`)
 		if vw <= 0 {
 			t.Fatal("no video frames decoded")
 		}
@@ -100,8 +113,8 @@ func TestAstraGoRod(t *testing.T) {
 	})
 
 	t.Run("javascript", func(t *testing.T) {
-		if got := page.MustEval(`() => 6 * 7`).Int(); got != 42 {
-			t.Fatalf("6*7 = %d", got)
+		if got := evalNumber(t, page, `() => 6 * 7`); got != 42 {
+			t.Fatalf("6*7 = %v", got)
 		}
 	})
 
@@ -119,21 +132,27 @@ func TestAstraGoRod(t *testing.T) {
 		t.Logf("screenshot: %d bytes", len(buf))
 	})
 
-	t.Run("astra stats over cdp", func(t *testing.T) {
-		stats, err := page.Client().Call(nil, "", "Astra.getStats", nil)
-		if err != nil {
-			t.Fatalf("Astra.getStats failed: %v", err)
+	t.Run("astra stats", func(t *testing.T) {
+		base := os.Getenv("ASTRA_HTTP")
+		if base == "" {
+			base = "http://127.0.0.1:9222"
 		}
-		t.Logf("stats: %s", stats)
+		resp, err := http.Get(base + "/stats")
+		if err != nil {
+			t.Fatalf("GET /stats failed: %v", err)
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
 		var s struct {
 			Requests       int     `json:"requests"`
 			BytesOriginal  int64   `json:"bytesOriginal"`
 			BytesDelivered int64   `json:"bytesDelivered"`
 			SavingPct      float64 `json:"savingPct"`
 		}
-		if err := json.Unmarshal(stats, &s); err != nil {
-			t.Fatalf("cannot parse stats: %v", err)
+		if err := json.Unmarshal(body, &s); err != nil {
+			t.Fatalf("cannot parse stats: %v (%s)", err, body)
 		}
+		t.Logf("stats: %s", body)
 		if s.Requests == 0 {
 			t.Fatal("astra counted no requests")
 		}

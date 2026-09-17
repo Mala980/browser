@@ -13,6 +13,7 @@ cd "$ROOT"
 
 PORT="${PORT:-9222}"
 FULL_PORT="${FULL_PORT:-9223}"
+DIRECT_PORT="${DIRECT_PORT:-9333}"
 SITE_PORT="${SITE_PORT:-8123}"
 TEST_URL="http://127.0.0.1:${SITE_PORT}/index.html"
 OUT="${OUT:-/tmp/astra-e2e}"
@@ -69,6 +70,24 @@ log "serve test site on :$SITE_PORT"
 ( cd tests/e2e/site && python3 -m http.server "$SITE_PORT" >"$OUT/site.log" 2>&1 ) &
 SITE_PID=$!
 wait_http "$TEST_URL" 20 || { echo "test site not reachable" >&2; exit 1; }
+
+log "control experiment: puppeteer straight to the engine (no astra)"
+rm -rf "$OUT/direct-profile"
+"$ENGINE" --headless=new --no-sandbox --disable-gpu --remote-debugging-port="$DIRECT_PORT" \
+  --user-data-dir="$OUT/direct-profile" about:blank >"$OUT/direct-chrome.log" 2>&1 &
+DIRECT_PID=$!
+sleep 4
+DIRECT_WS="$(curl -fsS "http://127.0.0.1:$DIRECT_PORT/json/version" 2>/dev/null |
+  sed -n 's/.*"webSocketDebuggerUrl": *"\([^"]*\)".*/\1/p')"
+if [[ -n "$DIRECT_WS" ]]; then
+  ( cd tests/e2e/puppeteer && TEST_URL="$TEST_URL" DIRECT_WS="$DIRECT_WS" \
+    timeout 120 node probe_direct_chrome.mjs ) || echo "  (direct probe failed)"
+else
+  echo "  (engine did not expose a direct endpoint)"
+fi
+kill "$DIRECT_PID" 2>/dev/null
+pkill -f -- "--remote-debugging-port=$DIRECT_PORT" 2>/dev/null
+sleep 1
 
 log "start astra (headless)"
 ./build/astra serve --engine "$ENGINE" --port "$PORT" --log-level 3 \

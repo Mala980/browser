@@ -240,8 +240,8 @@ def main():
         methods = [e['method'] for e in log]
         check('Fetch.enable' in methods, 'astra enabled Fetch interception', str(methods))
         check('Network.enable' in methods, 'astra enabled Network domain', str(methods))
-        check(all(e['sessionId'] == 'S1' for e in log if e['sessionId']),
-              'session id translated back to engine id', str(log[:3]))
+        check(all(e['sessionId'].startswith('S') for e in log if e['sessionId']),
+              'astra never leaks its own session ids to the engine', str(log[:4]))
 
         c.request('Mock.reset')
 
@@ -334,8 +334,8 @@ def main():
         # ------------------------------------------- evaluate / navigation
         r = c.request('Runtime.evaluate',
                       {'expression': '1+1', 'returnByValue': True}, session=session)
-        check(r is not None and r.get('result', {}).get('result', {}).get('value') ==
-              'mock-eval:1+1', 'Runtime.evaluate routed through astra', str(r))
+        check(r is not None and r.get('result', {}).get('result', {}).get('value') == 2,
+              'Runtime.evaluate routed through astra (1+1 -> 2)', str(r))
 
         c.request('Page.navigate', {'url': 'https://example.org/'}, session=session)
         ev = c.wait_for(lambda m: m.get('method') == 'Page.loadEventFired', 6)
@@ -367,11 +367,11 @@ def main():
         p = subprocess.run([ASTRA, 'open', 'https://example.org/',
                             '--engine-url',
                             'ws://127.0.0.1:%d/devtools/browser/mock' % (MOCK_PORT + 2),
-                            '--eval', '1+1', '--stats', '--wait', '200', '--log-level', '1'],
+                            '--eval', '6 * 7', '--stats', '--wait', '200', '--log-level', '1'],
                            capture_output=True, timeout=60)
         out = p.stdout.decode('utf-8', 'replace')
         check(p.returncode == 0, 'astra open exits 0', p.stderr.decode()[:400])
-        check('mock-eval:1+1' in out, 'astra open --eval returns the JS value', out[:300])
+        check('42' in out, 'astra open --eval prints the JS value (6 * 7 -> 42)', out[:300])
         check('astra bandwidth report' in out, 'astra open --stats prints the report', out[:400])
     finally:
         mock2.terminate()

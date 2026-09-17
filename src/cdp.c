@@ -25,6 +25,20 @@
 typedef enum { CONN_CLIENT = 0, CONN_ENGINE = 1 } conn_kind_t;
 typedef enum { CS_HTTP = 0, CS_WS = 1 } conn_state_t;
 
+/* Targets a client has been told about.  Chromium reports pre-existing targets
+ * synchronously (DevToolsAgentHost::AddObserver) *before* answering
+ * Target.setDiscoverTargets, so clients such as Puppeteer remember every page
+ * they discovered and then wait for its Target.attachedToTarget - even though
+ * their own auto-attach filter excludes pages.  Astra keeps track of these
+ * targets and attaches them on the client's behalf (see compat_tick()). */
+typedef struct discovered {
+    char target_id[160];
+    char type[32];
+    int attached;
+    uint64_t attach_after; /* 0 = do not attach */
+    struct discovered *next;
+} discovered_t;
+
 typedef struct conn {
     int fd;
     conn_kind_t kind;
@@ -34,6 +48,7 @@ typedef struct conn {
     int want_close;
     int discover;
     int auto_attach;
+    discovered_t *discovered;
     struct conn *next;
 } conn_t;
 
@@ -142,6 +157,11 @@ static void conn_close(conn_t *c) {
             }
         }
     }
+    while (c->discovered) {
+        discovered_t *d = c->discovered;
+        c->discovered = d->next;
+        free(d);
+    }
     if (c->fd >= 0) close(c->fd);
     c->fd = -1;
     buf_free(&c->in);
@@ -152,6 +172,12 @@ static void conn_close(conn_t *c) {
 
 static void send_json_to(conn_t *c, json_t *msg) {
     if (!c || c->fd < 0 || !msg) return;
+    if (g_log_level >= L_TRACE) {
+        char *dbg = json_stringify(msg);
+        LOGT("-> %s fd=%d kind=%d: %.300s", dbg ? "json" : "null", c->fd, (int)c->kind,
+             dbg ? dbg : "");
+        free(dbg);
+    }
     char *s = json_stringify(msg);
     if (!s) return;
     buf_t frame;
@@ -195,6 +221,13 @@ static session_t *session_by_engine(const char *id) {
     if (!id) return NULL;
     for (session_t *s = S.sessions; s; s = s->next)
         if (!strcmp(s->engine_id, id)) return s;
+    return NULL;
+}
+
+static session_t *session_by_target(const char *target_id) {
+    if (!target_id) return NULL;
+    for (session_t *s = S.sessions; s; s = s->next)
+        if (!strcmp(s->target_id, target_id)) return s;
     return NULL;
 }
 
@@ -275,6 +308,72 @@ static void pending_del(int id) {
             return;
         }
         pp = &(*pp)->next;
+    }
+}
+
+static void discovered_add(conn_t *c, const char *target_id, const char *type) {
+    if (!c || !target_id) return;
+    for (discovered_t *d = c->discovered; d; d = d->next)
+        if (!strcmp(d->target_id, target_id)) {
+            if (type && !d->type[0]) snprintf(d->type, sizeof(d->type), "%s", type);
+            return;
+        }
+    discovered_t *d = (discovered_t *)calloc(1, sizeof(discovered_t));
+    snprintf(d->target_id, sizeof(d->target_id), "%s", target_id);
+    snprintf(d->type, sizeof(d->type), "%s", type ? type : "");
+    d->next = c->discovered;
+    c->discovered = d;
+}
+
+static void discovered_del(conn_t *c, const char *target_id) {
+    discovered_t **pp = &c->discovered;
+    while (*pp) {
+        if (!strcmp((*pp)->target_id, target_id)) {
+            discovered_t *d = *pp;
+            *pp = d->next;
+            free(d);
+            return;
+        }
+        pp = &(*pp)->next;
+    }
+}
+
+static void discovered_mark_attached(conn_t *c, const char *target_id) {
+    for (discovered_t *d = c->discovered; d; d = d->next)
+        if (!strcmp(d->target_id, target_id)) {
+            d->attached = 1;
+            d->attach_after = 0;
+            return;
+        }
+}
+
+static void attach_req_add(const char *target_id, conn_t *client);
+
+/* Attach pages a client is waiting for but will never be auto-attached to. */
+static void compat_tick(void) {
+    uint64_t now = wall_ms();
+    for (conn_t *c = S.clients; c; c = c->next) {
+        if (c->state != CS_WS || !S.engine) continue;
+        for (discovered_t *d = c->discovered; d; d = d->next) {
+            if (d->attached || !d->attach_after || now < d->attach_after) continue;
+            if (strcmp(d->type, "page") && strcmp(d->type, "iframe")) {
+                d->attach_after = 0;
+                continue;
+            }
+            d->attach_after = 0;
+            attach_req_add(d->target_id, c);
+            int id = ++S.next_id;
+            json_t *m = jobj();
+            jset(m, "id", jnum((double)id));
+            jset(m, "method", jstr("Target.attachToTarget"));
+            json_t *pp = jobj();
+            jset(pp, "targetId", jstr(d->target_id));
+            jset(pp, "flatten", jbool(1));
+            jset(m, "params", pp);
+            send_json_to(S.engine, m);
+            json_free(m);
+            LOGD("compat: attaching %s (%s) for a client", d->target_id, d->type);
+        }
     }
 }
 
@@ -539,11 +638,34 @@ static void handle_target(conn_t *c, json_t *m) {
     }
     if (!strcmp(method, "Target.setAutoAttach")) {
         c->auto_attach = json_get_bool(params, "autoAttach", 0);
+        if (c->auto_attach) {
+            /* Give the engine 400 ms to attach them itself; Astra only steps in
+             * for the pages a client is waiting for but excluded from its own
+             * auto-attach filter (this is what Puppeteer needs). */
+            uint64_t when = wall_ms() + 400;
+            for (discovered_t *d = c->discovered; d; d = d->next) {
+                if (d->attached) continue;
+                if (strcmp(d->type, "page") && strcmp(d->type, "iframe")) continue;
+                d->attach_after = when;
+            }
+        }
         forward_to_engine(c, m);
         return;
     }
     if (!strcmp(method, "Target.attachToTarget")) {
         const char *tid = json_get_str(params, "targetId", NULL);
+        /* Astra may already have attached this target (compatibility attach for
+         * pages a client waits for).  Hand back that session instead of opening
+         * a second one: pages would otherwise receive events on the wrong
+         * session and the client would never see them. */
+        session_t *existing = session_by_target(tid);
+        if (existing && existing->client == c && existing->our_id[0]) {
+            json_t *res = jobj();
+            jset(res, "sessionId", jstr(existing->our_id));
+            send_ok(c, (int)json_get_num(m, "id", 0), NULL, res);
+            json_free(res);
+            return;
+        }
         if (tid) attach_req_add(tid, c);
         /* always flatten so that all sessions share one websocket */
         json_t *copy = json_clone(m);
@@ -658,10 +780,12 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
         }
         pending_t *p = pending_find(id);
         if (!p || !p->client) {
+            LOGT("response id=%d dropped: %s", id, p ? "no client" : "no pending");
             json_free(m);
             return;
         }
-        jset(m, "id", jnum((double)p->orig_id));
+        LOGT("relaying response id=%d -> client id=%d", id, p->orig_id);
+        jset(m, "id", jnum((double)p->orig_id)); /* translate back to the client id */
         const char *sid = json_get_str(m, "sessionId", NULL);
         if (sid) {
             session_t *s = session_by_engine(sid);
@@ -674,6 +798,18 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
             if (esid) {
                 session_t *s = session_by_engine(esid);
                 if (s) jset(res, "sessionId", jstr(s->our_id));
+            }
+        }
+        /* A freshly created page is never auto-attached (clients exclude pages
+         * from their auto-attach filter), but they wait for it: attach it too. */
+        if (!strcmp(p->method, "Target.createTarget") && p->client) {
+            json_t *res = json_get(m, "result");
+            const char *tid = res ? json_get_str(res, "targetId", NULL) : NULL;
+            if (tid) {
+                discovered_add(p->client, tid, "page");
+                for (discovered_t *d = p->client->discovered; d; d = d->next)
+                    if (!strcmp(d->target_id, tid) && !d->attached)
+                        d->attach_after = wall_ms() + 400;
             }
         }
         send_json_to(p->client, m);
@@ -721,6 +857,9 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
         }
         session_t *s = session_new(owner, engine_sid, tid);
         session_init(s->engine_id);
+        if (tid) {
+            for (conn_t *cc = S.clients; cc; cc = cc->next) discovered_mark_attached(cc, tid);
+        }
         json_t *copy = json_clone(m);
         if (json_get(copy, "params")) jset(json_get(copy, "params"), "sessionId", jstr(s->our_id));
         if (owner) {
@@ -744,8 +883,18 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
     }
     if (!strncmp(method, "Target.", 7)) {
         /* targetCreated / targetDestroyed / targetInfoChanged / targetCrashed */
+        if (!strcmp(method, "Target.targetCreated") && params) {
+            json_t *ti = json_get(params, "targetInfo");
+            const char *tid = ti ? json_get_str(ti, "targetId", NULL) : NULL;
+            const char *tty = ti ? json_get_str(ti, "type", NULL) : NULL;
+            for (conn_t *cc = S.clients; cc; cc = cc->next)
+                if (cc->state == CS_WS && (cc->discover || cc->auto_attach))
+                    discovered_add(cc, tid, tty);
+        }
         if (!strcmp(method, "Target.targetDestroyed") && params) {
             const char *tid = json_get_str(params, "targetId", NULL);
+            for (conn_t *cc = S.clients; cc; cc = cc->next)
+                if (tid) discovered_del(cc, tid);
             session_t **sp = &S.sessions;
             while (*sp) {
                 if (tid && !strcmp((*sp)->target_id, tid)) {
@@ -920,6 +1069,8 @@ static int do_poll(int timeout_ms) {
         if (fds[i].revents & POLLIN) handle_conn_readable(c);
         if (c->fd >= 0 && (fds[i].revents & POLLOUT)) handle_conn_writable(c);
     }
+    compat_tick();
+
     /* flush queued writes before reaping, otherwise short lived HTTP
      * responses would be dropped together with the connection */
     if (S.engine && S.engine->fd >= 0 && S.engine->out.len) handle_conn_writable(S.engine);
@@ -1067,21 +1218,23 @@ int cdp_attach_to_first_page(int timeout_ms) {
         cdp_release_result(&r);
         return -1;
     }
+    /* NOTE: the target id must be copied out before the result is released,
+     * the string lives inside the parsed JSON. */
+    char tid[160] = {0};
     json_t *infos = json_get(r.result, "targetInfos");
-    const char *target = NULL;
     if (infos) {
         for (size_t i = 0; i < infos->n; i++) {
             json_t *ti = infos->items[i];
             const char *type = json_get_str(ti, "type", "");
             if (!strcmp(type, "page")) {
-                target = json_get_str(ti, "targetId", NULL);
+                snprintf(tid, sizeof(tid), "%s", json_get_str(ti, "targetId", ""));
                 break;
             }
         }
     }
     cdp_release_result(&r);
-    if (!target) {
-        /* create one */
+    if (!tid[0]) {
+        /* no page yet: create one */
         json_t *p = jobj();
         jset(p, "url", jstr("about:blank"));
         if (cdp_cmd(NULL, "Target.createTarget", p, timeout_ms, &r) != 0) {
@@ -1090,15 +1243,12 @@ int cdp_attach_to_first_page(int timeout_ms) {
             return -1;
         }
         json_free(p);
-        target = NULL;
-        static char tid[160];
         snprintf(tid, sizeof(tid), "%s", json_get_str(r.result, "targetId", ""));
         cdp_release_result(&r);
         if (!tid[0]) return -1;
-        target = tid;
     }
     json_t *p = jobj();
-    jset(p, "targetId", jstr(target));
+    jset(p, "targetId", jstr(tid));
     jset(p, "flatten", jbool(1));
     if (cdp_cmd(NULL, "Target.attachToTarget", p, timeout_ms, &r) != 0) {
         json_free(p);
@@ -1110,7 +1260,7 @@ int cdp_attach_to_first_page(int timeout_ms) {
              json_get_str(r.result, "sessionId", ""));
     cdp_release_result(&r);
     if (!S.page_session[0]) return -1;
-    session_new(NULL, S.page_session, target);
+    session_new(NULL, S.page_session, tid);
     session_init(S.page_session);
     LOGD("attached to page session %s", S.page_session);
     return 0;

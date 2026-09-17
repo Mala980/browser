@@ -226,10 +226,14 @@ static session_t *session_by_engine(const char *id) {
     return NULL;
 }
 
+/* Never match an empty target id: a session astra could not map to a target
+ * would otherwise be handed out again for a later attach request (an attach
+ * without a target id, or one for a target that no longer exists), and the
+ * client would end up driving the wrong page. */
 static session_t *session_by_target(const char *target_id) {
-    if (!target_id) return NULL;
+    if (!target_id || !*target_id) return NULL;
     for (session_t *s = S.sessions; s; s = s->next)
-        if (!strcmp(s->target_id, target_id)) return s;
+        if (s->target_id[0] && !strcmp(s->target_id, target_id)) return s;
     return NULL;
 }
 

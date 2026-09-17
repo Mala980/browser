@@ -19,6 +19,8 @@ SNIFF_PORT_DIRECT="${SNIFF_PORT_DIRECT:-9337}"
 PROXY_PORT="${PROXY_PORT:-9339}"
 SNIFF_DIRECT_PORT="${SNIFF_DIRECT_PORT:-9338}"
 GOROD_DIRECT_PORT="${GOROD_DIRECT_PORT:-9335}"
+GOROD_PORT="${GOROD_PORT:-9224}"
+GOROD_PROXY_PORT="${GOROD_PROXY_PORT:-9334}"
 SITE_PORT="${SITE_PORT:-8123}"
 TEST_URL="http://127.0.0.1:${SITE_PORT}/index.html"
 OUT="${OUT:-/tmp/astra-e2e}"
@@ -152,25 +154,39 @@ if command -v go >/dev/null 2>&1; then
   # go-rod's websocket client sends a placeholder Sec-WebSocket-Key, which the
   # node based sniffer refuses; tests/e2e/cdp_proxy.py accepts any key and logs
   # every message in both directions.
+  # Its own astra at trace level: a stalled navigation is invisible from the
+  # client side, so log every message astra exchanges with the engine too.
+  ./build/astra serve --engine "$ENGINE" --port "$GOROD_PORT" --log-level 4 \
+    --cache-dir "$OUT/cache-gorod" --profile "$OUT/profile-gorod" >"$OUT/astra-gorod.log" 2>&1 &
+  GA_PID=$!
   GOROD_WS=""
-  if [[ -n "$ASTRA_WS_NOW" ]]; then
-    python3 tests/e2e/cdp_proxy.py --upstream "$ASTRA_WS_NOW" --port "$PROXY_PORT" \
-      --log "$OUT/gorod-cdp.log" >"$OUT/gorod-cdp.out" 2>&1 &
-    P3=$!
-    sleep 1
-    GOROD_WS="ws://127.0.0.1:$PROXY_PORT/devtools/browser/astra"
+  if wait_http "http://127.0.0.1:$GOROD_PORT/json/version" 40; then
+    ASTRA_WS_GOROD="$(curl -fsS "http://127.0.0.1:$GOROD_PORT/json/version" |
+      sed -n 's/.*"webSocketDebuggerUrl": *"\([^"]*\)".*/\1/p')"
+    if [[ -n "$ASTRA_WS_GOROD" ]]; then
+      python3 tests/e2e/cdp_proxy.py --upstream "$ASTRA_WS_GOROD" --port "$GOROD_PROXY_PORT" \
+        --log "$OUT/gorod-cdp.log" >"$OUT/gorod-cdp.out" 2>&1 &
+      P3=$!
+      sleep 1
+      GOROD_WS="ws://127.0.0.1:$GOROD_PROXY_PORT/devtools/browser/astra"
+    fi
+  else
+    echo "  (astra for go-rod did not start)"
+    cat "$OUT/astra-gorod.log" 2>/dev/null
   fi
   ( cd tests/e2e/gorod && go mod tidy >/dev/null 2>&1; \
     ASTRA_WS="$GOROD_WS" \
-    ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL="$TEST_URL" \
+    ASTRA_HTTP="http://127.0.0.1:$GOROD_PORT" TEST_URL="$TEST_URL" \
     timeout "$STEP_TIMEOUT" go test -timeout 300s -v ./... ) || rc=1
   if [[ -n "$GOROD_WS" ]]; then
     kill "$P3" 2>/dev/null
     echo "  last CDP messages seen by go-rod:"
-    tail -40 "$OUT/gorod-cdp.log" 2>/dev/null
+    tail -25 "$OUT/gorod-cdp.log" 2>/dev/null
   fi
-  echo "  astra log tail (unanswered commands show up as warnings):"
-  tail -40 "$OUT/astra-headless.log" 2>/dev/null
+  echo "  astra trace around the stall (engine side):"
+  grep -n "Page.navigate\|requestPaused\|Fetch\.\|frameStarted\|did not answer" \
+    "$OUT/astra-gorod.log" 2>/dev/null | tail -25
+  kill "$GA_PID" 2>/dev/null
 
   # Control: the same suite straight against Chrome, no astra in between.  If it
   # hangs there too the problem is a go-rod/Chrome version mismatch, not the

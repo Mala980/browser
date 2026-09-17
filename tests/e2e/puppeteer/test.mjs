@@ -18,6 +18,9 @@ const OUT_DIR = process.env.OUT_DIR || '/tmp/astra-e2e';
 // no DOM: skip every assertion that needs a real page (they run in CI with
 // Chrome) and keep verifying the control plane itself.
 const MOCK = !!process.env.ASTRA_MOCK;
+// ASTRA_CONTROL=1 -> the endpoint is a plain engine, astra is not in front of
+// it: the page is real, only the astra specific checks have to be skipped.
+const CONTROL = !!process.env.ASTRA_CONTROL;
 
 // Chrome nests a page session inside the session of its tab target, and
 // puppeteer only reports a page as closed when it sees Target.detachedFromTarget
@@ -171,6 +174,10 @@ async function main() {
   });
 
   await check('astra stats exposed over CDP', async () => {
+    if (CONTROL) {
+      console.log('    (skipped: no astra in front of the engine)');
+      return;
+    }
     const client = await page.createCDPSession();
     // puppeteer runs this on a page level session, so Astra has to answer with
     // the same sessionId; a browser level reply would never resolve here.
@@ -190,7 +197,7 @@ async function main() {
   });
 
   await check('cache hit on second navigation', async () => {
-    if (MOCK) { console.log('    (skipped: needs a real network stack)'); return; }
+    if (MOCK || CONTROL) { console.log('    (skipped: needs astra in front)'); return; }
     const client = await page.createCDPSession();
     await client.send('Astra.resetStats');
     await page.reload({ waitUntil: 'load' });

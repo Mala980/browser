@@ -113,7 +113,7 @@ if [[ -n "$D2_WS" ]]; then
   S1=$!
   sleep 1
   ( cd tests/e2e/puppeteer && ASTRA_WS="ws://127.0.0.1:$SNIFF_PORT_DIRECT" TEST_URL="$TEST_URL" \
-    OUT_DIR="$OUT" ASTRA_MOCK=1 timeout 60 node test.mjs ) || echo "  (traced direct run did not finish)"
+    OUT_DIR="$OUT" ASTRA_CONTROL=1 timeout 60 node test.mjs ) || echo "  (traced direct run did not finish)"
   kill "$S1" 2>/dev/null
 else
   echo "  (no direct endpoint for the trace)"

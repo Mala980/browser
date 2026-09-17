@@ -369,12 +369,6 @@ static int cmd_open(const astra_config *cfg, const char *url, struct one_shot *o
     return rc == 0 ? 0 : 1;
 }
 
-static void print_delta(const char *label, astra_stats_t a, astra_stats_t b) {
-    printf("  %-22s %12llu %12llu %+lld\n", label, (unsigned long long)a.requests,
-           (unsigned long long)b.requests,
-           (long long)b.requests - (long long)a.requests);
-}
-
 static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *os) {
     engine_t eng;
     if (engine_launch(cfg, &eng) != 0) return 1;
@@ -428,18 +422,22 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
     uint64_t off_net = cdp_net_rx();
 
     printf("\nastra benchmark: %s\n", url);
-    printf("  %-22s %12s %12s %12s\n", "metric", "lite on", "lite off", "delta");
-    print_delta("requests", on, off);
-    printf("  %-22s %12llu %12llu\n", "blocked (ads)", (unsigned long long)on.blocked,
+    printf("  %-26s %11s %11s %11s\n", "metric", "lite on", "lite off", "delta");
+    printf("  %-26s %11llu %11llu %+11lld\n", "requests",
+           (unsigned long long)on.requests, (unsigned long long)off.requests,
+           (long long)off.requests - (long long)on.requests);
+    printf("  %-26s %11llu %11llu\n", "blocked (ads)", (unsigned long long)on.blocked,
            (unsigned long long)off.blocked);
-    printf("  %-22s %12llu %12llu\n", "images optimized", (unsigned long long)on.images_optimized,
+    printf("  %-26s %11llu %11llu\n", "images optimized", (unsigned long long)on.images_optimized,
            (unsigned long long)off.images_optimized);
-    printf("  %-22s %12llu %12llu\n", "bytes delivered", (unsigned long long)on.bytes_delivered,
-           (unsigned long long)off.bytes_delivered);
-    printf("  %-22s %12llu %12llu\n", "bytes over the wire", (unsigned long long)on_net,
-           (unsigned long long)off_net);
-    printf("  %-22s %12llu %12llu\n", "bytes (would be)", (unsigned long long)on.bytes_original,
-           (unsigned long long)off.bytes_original);
+    printf("  %-26s %11llu %11llu\n", "bytes on the wire (chrome)",
+           (unsigned long long)on_net, (unsigned long long)off_net);
+    /* Astra's own counters only exist for the lite pass: with the optimizers off
+     * it forwards every body untouched, so it neither sees nor counts them. */
+    printf("  %-26s %11llu %11s\n", "bytes handed to the renderer",
+           (unsigned long long)on.bytes_delivered, "n/a");
+    printf("  %-26s %11llu %11s\n", "bytes before optimizing",
+           (unsigned long long)on.bytes_original, "n/a");
     /* Both passes are measured with Chrome's own network counter: it counts for
      * every request whether or not astra rewrites the body, so the two numbers
      * are comparable.  Astra's counters (what it handed to the renderer) are the

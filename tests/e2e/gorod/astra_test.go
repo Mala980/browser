@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -44,15 +45,24 @@ func endpoint(t *testing.T) string {
 	return info.WebSocketDebuggerURL
 }
 
-// evalNumber evaluates JS and parses the result, independent of the gson API.
+// evalNumber evaluates JS and parses the result as a number.  It goes through
+// encoding/json (gson.JSON implements json.Marshaler) so it does not depend on
+// which accessors a given rod/gson version happens to expose.
 func evalNumber(t *testing.T, page *rod.Page, expr string) float64 {
 	t.Helper()
+	raw, err := json.Marshal(page.MustEval(expr))
+	if err != nil {
+		t.Fatalf("cannot marshal the result of %s: %v", expr, err)
+	}
 	var v float64
-	raw := page.MustEval(expr).Raw()
-	if err := json.Unmarshal([]byte(raw), &v); err != nil {
+	if err := json.Unmarshal(raw, &v); err != nil {
 		var s string
-		_ = json.Unmarshal([]byte(raw), &s)
-		t.Fatalf("cannot parse %q from %s: %v", raw, expr, err)
+		if err2 := json.Unmarshal(raw, &s); err2 == nil {
+			if f, err3 := strconv.ParseFloat(s, 64); err3 == nil {
+				return f
+			}
+		}
+		t.Fatalf("cannot read a number from %s (%s): %v", expr, raw, err)
 	}
 	return v
 }

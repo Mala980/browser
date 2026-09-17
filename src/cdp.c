@@ -350,6 +350,14 @@ static void discovered_mark_attached(conn_t *c, const char *target_id) {
 static void attach_req_add(const char *target_id, conn_t *client);
 
 /* Attach pages a client is waiting for but will never be auto-attached to. */
+/* Bytes Chrome's network stack actually received (Network.loadingFinished
+ * encodedDataLength).  Independent of Astra's own accounting, so it works with
+ * lite mode off too - that is what makes an honest A/B measurement possible. */
+static uint64_t g_net_rx = 0;
+
+void cdp_net_rx_reset(void) { g_net_rx = 0; }
+uint64_t cdp_net_rx(void) { return g_net_rx; }
+
 static void compat_tick(void) {
     uint64_t now = wall_ms();
     for (conn_t *c = S.clients; c; c = c->next) {

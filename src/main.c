@@ -391,13 +391,16 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
 
     /* pass 1: lite mode on */
     stats_reset();
+    cdp_net_rx_reset();
     navigate_and_wait(sess, url, os->timeout_ms);
     sleep_ms(os->wait_ms > 0 ? os->wait_ms : 1500);
     astra_stats_t on = g_stats;
+    uint64_t on_net = cdp_net_rx();
 
     /* pass 2: lite mode off (hard reload, cold cache) */
     cdp_set_lite(0);
     stats_reset();
+    cdp_net_rx_reset();
     json_t *p = jobj();
     jset(p, "ignoreCache", jbool(1));
     cdp_arm_event("Page.loadEventFired");
@@ -406,6 +409,7 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
     cdp_wait_armed(os->timeout_ms);
     sleep_ms(os->wait_ms > 0 ? os->wait_ms : 1500);
     astra_stats_t off = g_stats;
+    uint64_t off_net = cdp_net_rx();
 
     printf("\nastra benchmark: %s\n", url);
     printf("  %-22s %12s %12s %12s\n", "metric", "lite on", "lite off", "delta");
@@ -414,15 +418,20 @@ static int cmd_bench(const astra_config *cfg, const char *url, struct one_shot *
            (unsigned long long)off.blocked);
     printf("  %-22s %12llu %12llu\n", "images optimized", (unsigned long long)on.images_optimized,
            (unsigned long long)off.images_optimized);
-    printf("  %-22s %12llu %12llu\n", "bytes transferred", (unsigned long long)on.bytes_delivered,
-           (unsigned long long)off.bytes_delivered);
+    printf("  %-22s %12llu %12llu\n", "bytes over the wire", (unsigned long long)on_net,
+           (unsigned long long)off_net);
     printf("  %-22s %12llu %12llu\n", "bytes (would be)", (unsigned long long)on.bytes_original,
            (unsigned long long)off.bytes_original);
-    if (off.bytes_delivered > 0) {
-        double pct = 100.0 * ((double)off.bytes_delivered - (double)on.bytes_delivered) /
-                     (double)off.bytes_delivered;
+    /* The baseline is what Chrome itself reports on the wire; if the second pass
+     * recorded nothing (no interception -> no counters), fall back to the sum of
+     * the original response sizes that pass 1 saw. */
+    uint64_t baseline = off_net > 0 ? off_net : on.bytes_original;
+    if (baseline > 0) {
+        double pct = 100.0 * ((double)baseline - (double)on_net) / (double)baseline;
         printf("\n  => lite mode moved %.1f%% fewer bytes for the same page (%.1f KB vs %.1f KB)\n",
-               pct, on.bytes_delivered / 1024.0, off.bytes_delivered / 1024.0);
+               pct, on_net / 1024.0, baseline / 1024.0);
+    } else {
+        printf("\n  (no baseline to compare against)\n");
     }
     printf("\n");
     cdp_detach();

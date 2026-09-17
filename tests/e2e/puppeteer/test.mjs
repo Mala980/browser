@@ -34,6 +34,7 @@ async function check(label, fn) {
 }
 
 async function getWsEndpoint() {
+  if (process.env.ASTRA_WS) return process.env.ASTRA_WS;
   const res = await fetch(`${ASTRA_HTTP}/json/version`);
   assert.equal(res.status, 200, '/json/version status');
   const info = await res.json();

@@ -14,6 +14,9 @@ cd "$ROOT"
 PORT="${PORT:-9222}"
 FULL_PORT="${FULL_PORT:-9223}"
 DIRECT_PORT="${DIRECT_PORT:-9333}"
+SNIFF_PORT="${SNIFF_PORT:-9336}"
+SNIFF_PORT_DIRECT="${SNIFF_PORT_DIRECT:-9337}"
+SNIFF_DIRECT_PORT="${SNIFF_DIRECT_PORT:-9338}"
 SITE_PORT="${SITE_PORT:-8123}"
 TEST_URL="http://127.0.0.1:${SITE_PORT}/index.html"
 OUT="${OUT:-/tmp/astra-e2e}"
@@ -81,13 +84,37 @@ DIRECT_WS="$(curl -fsS "http://127.0.0.1:$DIRECT_PORT/json/version" 2>/dev/null 
   sed -n 's/.*"webSocketDebuggerUrl": *"\([^"]*\)".*/\1/p')"
 if [[ -n "$DIRECT_WS" ]]; then
   ( cd tests/e2e/puppeteer && TEST_URL="$TEST_URL" DIRECT_WS="$DIRECT_WS" \
-    timeout 120 node probe_direct_chrome.mjs ) || echo "  (direct probe failed)"
+    timeout 120 node ../probe_direct_chrome.mjs ) || echo "  (direct probe failed)"
 else
   echo "  (engine did not expose a direct endpoint)"
 fi
 kill "$DIRECT_PID" 2>/dev/null
 pkill -f -- "--remote-debugging-port=$DIRECT_PORT" 2>/dev/null
 sleep 1
+
+log "cdp trace: puppeteer straight to the engine (control, 60s)"
+rm -rf "$OUT/direct2-profile"
+"$ENGINE" --headless=new --no-sandbox --disable-gpu --remote-debugging-port="$SNIFF_DIRECT_PORT" \
+  --user-data-dir="$OUT/direct2-profile" about:blank >"$OUT/direct2-chrome.log" 2>&1 &
+D2_PID=$!
+sleep 4
+D2_WS="$(curl -fsS "http://127.0.0.1:$SNIFF_DIRECT_PORT/json/version" 2>/dev/null |
+  sed -n 's/.*"webSocketDebuggerUrl": *"\([^"]*\)".*/\1/p')"
+if [[ -n "$D2_WS" ]]; then
+  SNIFF_UPSTREAM="$D2_WS" SNIFF_PORT="$SNIFF_PORT_DIRECT" SNIFF_LOG="$OUT/sniff-direct.log" \
+    node tests/e2e/puppeteer/cdp_sniffer.mjs >"$OUT/sniff-direct.out" 2>&1 &
+  S1=$!
+  sleep 1
+  ( cd tests/e2e/puppeteer && ASTRA_WS="ws://127.0.0.1:$SNIFF_PORT_DIRECT" TEST_URL="$TEST_URL" \
+    OUT_DIR="$OUT" ASTRA_MOCK=1 timeout 60 node test.mjs ) || echo "  (traced direct run did not finish)"
+  kill "$S1" 2>/dev/null
+else
+  echo "  (no direct endpoint for the trace)"
+fi
+kill "$D2_PID" 2>/dev/null
+pkill -f -- "--remote-debugging-port=$SNIFF_DIRECT_PORT" 2>/dev/null
+sleep 1
+
 
 log "start astra (headless)"
 ./build/astra serve --engine "$ENGINE" --port "$PORT" --log-level 3 \
@@ -100,6 +127,21 @@ log "puppeteer (headless mode)"
 export ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL OUT_DIR="$OUT"
 ( cd tests/e2e/puppeteer && npm install --silent --no-fund --no-audit >/dev/null 2>&1; \
     timeout "$STEP_TIMEOUT" node test.mjs ) || rc=1
+
+log "cdp trace: puppeteer through astra (60s)"
+ASTRA_WS_NOW="$(curl -fsS "http://127.0.0.1:$PORT/json/version" 2>/dev/null |
+  sed -n 's/.*"webSocketDebuggerUrl": *"\([^"]*\)".*/\1/p')"
+if [[ -n "$ASTRA_WS_NOW" ]]; then
+  SNIFF_UPSTREAM="$ASTRA_WS_NOW" SNIFF_PORT="$SNIFF_PORT" SNIFF_LOG="$OUT/sniff-astra.log" \
+    node tests/e2e/puppeteer/cdp_sniffer.mjs >"$OUT/sniff-astra.out" 2>&1 &
+  S2=$!
+  sleep 1
+  ( cd tests/e2e/puppeteer && ASTRA_WS="ws://127.0.0.1:$SNIFF_PORT" TEST_URL="$TEST_URL" \
+    OUT_DIR="$OUT" ASTRA_MOCK=1 timeout 60 node test.mjs ) || echo "  (traced astra run did not finish)"
+  kill "$S2" 2>/dev/null
+else
+  echo "  (astra did not expose a ws endpoint for the trace)"
+fi
 
 log "go-rod"
 if command -v go >/dev/null 2>&1; then
@@ -139,6 +181,10 @@ else
   echo "Xvfb not installed - skipping windowed mode test"
 fi
 
+log "cdp trace: puppeteer through astra (last 60 lines)"
+[[ -f "$OUT/sniff-astra.log" ]] && tail -60 "$OUT/sniff-astra.log" || echo "(no trace)"
+log "cdp trace: puppeteer straight to chrome (last 60 lines)"
+[[ -f "$OUT/sniff-direct.log" ]] && tail -60 "$OUT/sniff-direct.log" || echo "(no trace)"
 log "done"
 echo "artifacts in $OUT"
 exit $rc

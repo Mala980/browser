@@ -587,7 +587,13 @@ static void serve_http(conn_t *c, http_req_t *r) {
 
 static void forward_to_engine(conn_t *client, json_t *m) {
     if (!S.engine || S.engine->fd < 0) {
-        LOGE("engine not connected, dropping %s", json_get_str(m, "method", "?"));
+        /* Answer instead of dropping: a client whose command disappears waits
+         * for its own timeout with no clue about what went wrong. */
+        const char *mtd = json_get_str(m, "method", "?");
+        LOGE("engine not connected, cannot serve %s", mtd);
+        if (json_get(m, "id"))
+            send_error(client, (int)json_get_num(m, "id", 0),
+                       json_get_str(m, "sessionId", NULL), "Engine not connected");
         return;
     }
     int newid = ++S.next_id;

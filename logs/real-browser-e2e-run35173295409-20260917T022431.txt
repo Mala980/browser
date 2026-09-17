@@ -1,0 +1,115 @@
+engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome
+
+=== generate test assets ===
+generating png assets
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-1.png (3685096 bytes)
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-2.png (2682410 bytes)
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-3.png (1836742 bytes)
+generating video asset
+total 8160
+-rw-r--r-- 1 runner runner   22764 Sep 17 02:09 clip.mp4
+-rw-r--r-- 1 runner runner  119453 Sep 17 02:09 clip.webm
+-rw-r--r-- 1 runner runner 3685096 Sep 17 02:09 photo-1.png
+-rw-r--r-- 1 runner runner 2682410 Sep 17 02:09 photo-2.png
+-rw-r--r-- 1 runner runner 1836742 Sep 17 02:09 photo-3.png
+
+=== serve test site on :8123 ===
+
+=== start astra (headless) ===
+
+=== puppeteer (headless mode) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9222
+  page : http://127.0.0.1:8123/index.html
+
+=== go-rod ===
+# github.com/mala980/browser/tests/e2e/gorod [github.com/mala980/browser/tests/e2e/gorod.test]
+./astra_test.go:91:75: page.MustEval(`() => document.getElementById('vid').currentTime`).Float undefined (type gson.JSON has no field or method Float)
+./astra_test.go:123:22: page.Client undefined (type *rod.Page has no field or method Client)
+FAIL	github.com/mala980/browser/tests/e2e/gorod [build failed]
+FAIL
+
+=== astra bench (real byte savings, lite on vs off) ===
+02:17:11.625 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+02:17:11.876 [ERROR] engine exited during startup (status 134). Try --no-sandbox or check ASTRA_ENGINE_LOG
+02:17:11.876 [WARN ] engine failed to start, retrying with --no-sandbox
+02:17:11.876 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+02:17:12.182 [INFO ] engine ready: Chrome/153.0.8010.47 on port 45703 (ws://127.0.0.1:45703/devtools/browser/25fcaa84-1372-4bad-bf5b-ac8db9481bb3)
+02:17:12.182 [INFO ] filters: 142 builtin rules active
+02:17:12.182 [INFO ] cache: /tmp/astra-e2e/cache-bench (0 entries, 0.0 MB)
+bench did not produce a comparison
+
+=== start astra (full / windowed mode under Xvfb) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9223
+  page : http://127.0.0.1:8123/index.html
+
+=== done ===
+artifacts in /tmp/astra-e2e
+== astra headless ==
+02:09:55.151 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+02:09:55.401 [ERROR] engine exited during startup (status 134). Try --no-sandbox or check ASTRA_ENGINE_LOG
+02:09:55.401 [WARN ] engine failed to start, retrying with --no-sandbox
+02:09:55.401 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+02:09:55.765 [INFO ] engine ready: Chrome/153.0.8010.47 on port 37557 (ws://127.0.0.1:37557/devtools/browser/39b6b607-726b-4cd5-954b-74194b5b0d1d)
+02:09:55.765 [INFO ] filters: 142 builtin rules active
+02:09:55.765 [INFO ] cache: /tmp/astra-e2e/cache (0 entries, 0.0 MB)
+02:09:55.793 [DEBUG] engine websocket connected (fd 3)
+02:09:55.793 [INFO ] astra control plane ready on http://127.0.0.1:9222  (ws: /devtools/browser/astra-3958)
+02:09:55.947 [DEBUG] http GET /json/version
+02:09:58.807 [DEBUG] http GET /json/version
+02:09:58.820 [DEBUG] websocket client connected (fd 5)
+02:09:58.829 [DEBUG] session astra-session-1 -> engine 248BCE78F467BDEA2047ACA80D2D4D43 (target 21630C579E9CC854EDF399B6D26DCD64)
+02:09:58.829 [DEBUG] session astra-session-2 -> engine F267ADED6982ED650773B48F78EFFD22 (target 3F145AE7D78EA7CA3E0C0095BFDD3E6D)
+02:09:58.829 [DEBUG] session astra-session-3 -> engine 8F65C9F38E0FA1659AA3C7DE2587EC93 (target ACE91FA032D87D3CC0DF984C5A6E9B1C)
+02:09:58.829 [DEBUG] session astra-session-4 -> engine BE270C3199BA6A47424AE6C487573032 (target FDEB32CDEB837CA3FD41E5D4D8624211)
+02:09:58.832 [DEBUG] session astra-session-5 -> engine 9440A2373414E2EF467454A36B947E5B (target CEF35D537E49F91C380E08201CEC43E2)
+02:09:58.832 [DEBUG] session astra-session-6 -> engine 4A0296B4F3A946DD0AF7BF63E65A3CFF (target 57B63F9A018A8100872ECDC8AD129A18)
+02:09:58.833 [DEBUG] session astra-session-7 -> engine C7E430CB783F7888C968CB6629DD5603 (target C8917267DFA3B14978B7076236EECA9E)
+02:10:55.831 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:11:55.928 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:12:56.027 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:13:56.126 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:14:56.223 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:15:56.322 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:16:56.421 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+
+--- astra bandwidth report -------------------------------
+ requests inspected : 0
+ blocked (ads)      : 0
+ cache hits         : 0 (revalidated 0)
+ images optimized   : 0
+ text minified      : 0
+ would download     : 0.00 B
+ actually delivered : 0.00 B
+ total saved        : 0.00 B (0.0%)
+ cpu: image 0.0 ms, minify 0.0 ms
+---------------------------------------------------------
+== astra full ==
+02:17:30.315 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (windowed)
+02:17:30.565 [ERROR] engine exited during startup (status 133). Try --no-sandbox or check ASTRA_ENGINE_LOG
+02:17:30.565 [WARN ] engine failed to start, retrying with --no-sandbox
+02:17:30.565 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (windowed)
+02:17:31.250 [INFO ] engine ready: Chrome/153.0.8010.47 on port 39621 (ws://127.0.0.1:39621/devtools/browser/2503bdf9-1f8d-4db7-a982-814abb3cee3a)
+02:17:31.250 [INFO ] filters: 142 builtin rules active
+02:17:31.251 [INFO ] cache: /tmp/astra-e2e/cache-full (0 entries, 0.0 MB)
+02:17:31.279 [DEBUG] engine websocket connected (fd 3)
+02:17:31.279 [INFO ] astra control plane ready on http://127.0.0.1:9223  (ws: /devtools/browser/astra-6997)
+02:17:31.394 [DEBUG] http GET /json/version
+02:17:31.766 [DEBUG] http GET /json/version
+02:17:31.784 [DEBUG] websocket client connected (fd 5)
+02:17:31.795 [DEBUG] session astra-session-1 -> engine EAB3A63BEDA31531CB3D1EF0157D96A9 (target 178CCFB314DE300ED1F820416DF228B9)
+02:17:31.799 [DEBUG] session astra-session-2 -> engine 27DF57E60AADB6541B121B796B24A0F6 (target 2C247C5DE32CDF84A6341E0C3893FDD1)
+02:17:31.799 [DEBUG] session astra-session-3 -> engine E2EB1B81B541FE8C8C184D56BBD7DABB (target 779AE99D88F59542618F49DB487ABFFB)
+02:17:31.799 [DEBUG] session astra-session-4 -> engine 1A7D81B41409876F90E8DB537B8111EC (target 7F58D8C7069624BC085454E962D109A7)
+02:17:31.799 [DEBUG] session astra-session-5 -> engine D531CF6FEC0094F33A97D12838BAF44C (target 755712A7C6697FB64B25659BDB88FEBE)
+02:17:31.799 [DEBUG] session astra-session-6 -> engine BC1FFC5A9D8049E6D21341C6ECBF94B4 (target 08A4948809E58A7FF5F0A6462BFED780)
+02:17:31.806 [DEBUG] session astra-session-7 -> engine 700CECB19961C64DEF0667F554B6C8AD (target 6FDA31CD204F281B7906A403DCCCBFD5)
+02:18:31.327 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:19:31.424 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:20:31.520 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:21:31.618 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:22:31.618 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+02:23:31.718 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+== site ==
+127.0.0.1 - - [17/Sep/2026 02:09:55] "GET /index.html HTTP/1.1" 200 -

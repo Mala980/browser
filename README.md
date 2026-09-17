@@ -79,7 +79,7 @@ semuanya ditulis sendiri).
 git clone https://github.com/Mala980/browser.git
 cd browser
 make -j$(nproc)          # -> build/astra
-make test                # 141 unit check + 40 e2e check (mock engine)
+make test                # 141 unit check + 43 e2e check (mock engine)
 sudo make install        # -> /usr/local/bin/astra
 ```
 
@@ -281,7 +281,7 @@ besar bisa dijalankan lokal:
 | Tingkat | Perintah | Isi |
 |---|---|---|
 | Unit | `make test` | 141 pemeriksaan: JSON, base64/SHA-1, URL/eTLD+1, filter iklan, minifier, codec gambar (encode→decode balik), cache+eviction, framing/fragmentasi WebSocket, handshake, statistik, konfigurasi, HTTP |
-| Control plane (e2e) | `make integration` | 40 pemeriksaan terhadap **mock CDP engine** (`tests/e2e/mock_engine.py`): endpoint `/json/*`, upgrade WebSocket, `Target.*` + pemetaan session, blokir iklan lewat Fetch, transcode gambar nyata (PNG 360 KB → JPEG 68 KB), minifikasi HTML, passthrough JS, akuntansi statistik, `astra open` CLI |
+| Control plane (e2e) | `make integration` | 43 pemeriksaan terhadap **mock CDP engine** (`tests/e2e/mock_engine.py`): endpoint `/json/*`, upgrade WebSocket, `Target.*` + pemetaan session, blokir iklan lewat Fetch, transcode gambar nyata (PNG 360 KB → JPEG 68 KB), minifikasi HTML, passthrough JS, akuntansi statistik, `astra open` CLI |
 | Penghematan nyata | `make measure` | mendorong aset uji asli (3 foto PNG + HTML + CSS) melewati pipeline optimizer Astra dan memastikan total penghematan ≥ 25% (terukur: **73,9%**) |
 | Browser sungguhan (e2e) | `bash tests/e2e/run_real_browser_tests.sh` | Puppeteer + go-rod terhadap Chromium asli: navigasi, **gambar ter-decode**, **video berjalan** (`currentTime` maju), screenshot PNG, probe FPS rAF, multi-tab, statistik CDP, cache pada reload, mode headless **dan** mode penuh (Xvfb) |
 | Bandwidth | `astra bench <url>` | perbandingan lite ON vs OFF pada halaman yang sama, diukur dari byte yang benar-benar lewat |

@@ -320,6 +320,17 @@ def main():
         check(r is not None and r.get('result', {}).get('version') is not None,
               'Astra.getVersion works over CDP', str(r)[:160])
 
+        # puppeteer/go-rod send everything on a page session: same domain must work there too
+        r = c.request('Astra.getStats', session=session)
+        check(r is not None and 'result' in r and r['result'].get('requests', 0) >= 4,
+              'Astra.getStats works on a page session (as puppeteer sends it)', str(r)[:160])
+        r = c.request('Astra.resetStats', session=session)
+        check(r is not None and 'result' in r,
+              'Astra.resetStats works on a page session', str(r)[:160])
+        r = c.request('Astra.getStats', session=session)
+        check(r is not None and r['result'].get('requests', 0) == 0,
+              'resetStats really resets the counters', str(r)[:160])
+
         # ------------------------------------------- evaluate / navigation
         r = c.request('Runtime.evaluate',
                       {'expression': '1+1', 'returnByValue': True}, session=session)

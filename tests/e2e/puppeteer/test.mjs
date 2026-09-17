@@ -184,6 +184,7 @@ async function main() {
     for (const f of failures) console.log(`  failed: ${f}`);
     process.exit(1);
   }
+  process.exit(0); // the CDP socket can keep the event loop alive otherwise
 }
 
 main().catch((e) => {

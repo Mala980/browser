@@ -576,11 +576,18 @@ static void client_on_msg(conn_t *c, const uint8_t *data, size_t len) {
     int id = (int)json_get_num(m, "id", 0);
     LOGT("client method=%s id=%d sid=%s", method, id, sid ? sid : "-");
 
+    /* Astra's own domain is always answered locally, also when a client uses a
+     * page level CDP session (puppeteer's page.createCDPSession() does exactly
+     * that: every command carries a sessionId). */
+    if (!strncmp(method, "Astra.", 6)) {
+        handle_astra(c, m);
+        json_free(m);
+        return;
+    }
+
     if (!sid) {
         if (!strncmp(method, "Target.", 7))
             handle_target(c, m);
-        else if (!strncmp(method, "Astra.", 6))
-            handle_astra(c, m);
         else
             forward_to_engine(c, m);
         json_free(m);

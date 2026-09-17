@@ -48,10 +48,14 @@ if [[ -z "$ENGINE" ]]; then
 fi
 echo "engine: $ENGINE"
 
+STEP_TIMEOUT="${STEP_TIMEOUT:-420}"
+
 cleanup() {
   [[ -n "${ASTRA_PID:-}" ]] && kill "$ASTRA_PID" 2>/dev/null
   [[ -n "${SITE_PID:-}" ]] && kill "$SITE_PID" 2>/dev/null
   [[ -n "${XVFB_PID:-}" ]] && kill "$XVFB_PID" 2>/dev/null
+  # engine processes we spawned (all carry --remote-debugging-port)
+  pkill -f -- "--remote-debugging-port" 2>/dev/null
 }
 trap cleanup EXIT
 
@@ -75,18 +79,20 @@ wait_http "http://127.0.0.1:$PORT/json/version" 40 || {
 
 log "puppeteer (headless mode)"
 export ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL OUT_DIR="$OUT"
-( cd tests/e2e/puppeteer && npm install --silent --no-fund --no-audit >/dev/null 2>&1; node test.mjs ) || rc=1
+( cd tests/e2e/puppeteer && npm install --silent --no-fund --no-audit >/dev/null 2>&1; \
+    timeout "$STEP_TIMEOUT" node test.mjs ) || rc=1
 
 log "go-rod"
 if command -v go >/dev/null 2>&1; then
   ( cd tests/e2e/gorod && go mod tidy >/dev/null 2>&1; \
-    ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL="$TEST_URL" go test -v ./... ) || rc=1
+    ASTRA_HTTP="http://127.0.0.1:$PORT" TEST_URL="$TEST_URL" \
+    timeout "$STEP_TIMEOUT" go test -timeout 300s -v ./... ) || rc=1
 else
   echo "go not installed - skipping go-rod tests"
 fi
 
 log "astra bench (real byte savings, lite on vs off)"
-./build/astra bench "$TEST_URL" --engine "$ENGINE" --wait 1500 \
+timeout "$STEP_TIMEOUT" ./build/astra bench "$TEST_URL" --engine "$ENGINE" --wait 1500 \
   --cache-dir "$OUT/cache-bench" --profile "$OUT/profile-bench" --log-level 2 | tee "$OUT/bench.txt"
 if ! grep -q "lite mode moved" "$OUT/bench.txt"; then
   echo "bench did not produce a comparison" >&2
@@ -106,7 +112,7 @@ if command -v Xvfb >/dev/null 2>&1; then
   ASTRA_PID=$!
   if wait_http "http://127.0.0.1:$FULL_PORT/json/version" 40; then
     ( cd tests/e2e/puppeteer && ASTRA_HTTP="http://127.0.0.1:$FULL_PORT" TEST_URL="$TEST_URL" \
-      OUT_DIR="$OUT" node test.mjs ) || rc=1
+      OUT_DIR="$OUT" timeout "$STEP_TIMEOUT" node test.mjs ) || rc=1
   else
     echo "astra --mode=full did not start:" >&2; cat "$OUT/astra-full.log" >&2; rc=1
   fi

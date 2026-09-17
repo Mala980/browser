@@ -53,10 +53,10 @@ func testURL() string {
 
 func TestAstraGoRod(t *testing.T) {
 	ws := endpoint(t)
-	browser := rod.New().ControlURL(ws).MustConnect()
+	browser := rod.New().ControlURL(ws).Timeout(60 * time.Second).MustConnect()
 	defer browser.MustClose()
 
-	page := browser.MustPage(testURL())
+	page := browser.MustPage(testURL()).Timeout(60 * time.Second)
 	page.MustWaitLoad()
 
 	t.Run("title", func(t *testing.T) {

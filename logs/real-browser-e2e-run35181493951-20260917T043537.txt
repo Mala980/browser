@@ -1,0 +1,234 @@
+engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome
+
+=== generate test assets ===
+generating png assets
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-1.png (3685096 bytes)
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-2.png (2682410 bytes)
+  /home/runner/work/browser/browser/tests/e2e/site/assets/photo-3.png (1836742 bytes)
+generating video asset
+total 8160
+-rw-r--r-- 1 runner runner   22764 Sep 17 04:20 clip.mp4
+-rw-r--r-- 1 runner runner  119453 Sep 17 04:20 clip.webm
+-rw-r--r-- 1 runner runner 3685096 Sep 17 04:20 photo-1.png
+-rw-r--r-- 1 runner runner 2682410 Sep 17 04:20 photo-2.png
+-rw-r--r-- 1 runner runner 1836742 Sep 17 04:20 photo-3.png
+
+=== serve test site on :8123 ===
+
+=== control experiment: puppeteer straight to the engine (no astra) ===
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer-core' imported from /home/runner/work/browser/browser/tests/e2e/probe_direct_chrome.mjs
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v20.20.2
+  (direct probe failed)
+
+=== cdp trace: puppeteer straight to the engine (control, 60s) ===
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'puppeteer-core' imported from /home/runner/work/browser/browser/tests/e2e/puppeteer/test.mjs
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v20.20.2
+  (traced direct run did not finish)
+
+=== start astra (headless) ===
+
+=== puppeteer (headless mode) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9222
+  page : http://127.0.0.1:8123/index.html
+
+=== cdp trace: puppeteer through astra (60s) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9222
+  page : http://127.0.0.1:8123/index.html
+  connected, Chrome/153.0.8010.47
+fatal: TimeoutError: Timed out after waiting 30000ms
+    at file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/puppeteer/common/util.js:237:19
+    at file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/third_party/rxjs/rxjs.js:1936:31
+    at OperatorSubscriber2._this._next (file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/third_party/rxjs/rxjs.js:993:9)
+    at Subscriber2.next (file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/third_party/rxjs/rxjs.js:696:12)
+    at AsyncAction2.<anonymous> (file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/third_party/rxjs/rxjs.js:2280:20)
+    at AsyncAction2._execute (file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/third_party/rxjs/rxjs.js:1360:12)
+    at AsyncAction2.execute (file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/third_party/rxjs/rxjs.js:1349:22)
+    at AsyncScheduler2.flush (file:///home/runner/work/browser/browser/tests/e2e/puppeteer/node_modules/puppeteer-core/lib/esm/third_party/rxjs/rxjs.js:1427:26)
+    at listOnTimeout (node:internal/timers:581:17)
+    at process.processTimers (node:internal/timers:519:7) {
+  [cause]: undefined
+}
+  (traced astra run did not finish)
+
+=== go-rod ===
+# github.com/mala980/browser/tests/e2e/gorod
+# [github.com/mala980/browser/tests/e2e/gorod]
+./astra_test.go:122:3: (*testing.common).Logf format %d has arg vw of wrong type float64
+FAIL	github.com/mala980/browser/tests/e2e/gorod [build failed]
+FAIL
+
+=== astra bench (real byte savings, lite on vs off) ===
+04:28:25.723 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+04:28:25.973 [ERROR] engine exited during startup (status 134). Try --no-sandbox or check ASTRA_ENGINE_LOG
+04:28:25.973 [WARN ] engine failed to start, retrying with --no-sandbox
+04:28:25.973 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+04:28:26.257 [INFO ] engine ready: Chrome/153.0.8010.47 on port 41369 (ws://127.0.0.1:41369/devtools/browser/73731693-cc51-445b-9852-3a04ba884700)
+04:28:26.257 [INFO ] filters: 142 builtin rules active
+04:28:26.257 [INFO ] cache: /tmp/astra-e2e/cache-bench (0 entries, 0.0 MB)
+
+astra benchmark: http://127.0.0.1:8123/index.html
+  metric                      lite on     lite off        delta
+  requests                          5            0 -5
+  blocked (ads)                     0            0
+  images optimized                  3            0
+  bytes over the wire               0            0
+  bytes (would be)            8324717            0
+
+  => lite mode moved 100.0% fewer bytes for the same page (0.0 KB vs 8129.6 KB)
+
+
+=== start astra (full / windowed mode under Xvfb) ===
+astra + puppeteer end-to-end test
+  astra: http://127.0.0.1:9223
+  page : http://127.0.0.1:8123/index.html
+
+=== cdp trace: puppeteer through astra (last 60 lines) ===
+  1169ms CLI->ENG Browser.getVersion id=1 sid=-
+1170ms -- upstream open
+  1171ms ENG->CLI response id=1
+  1172ms CLI->ENG Target.getBrowserContexts id=2 sid=-
+  1173ms ENG->CLI response id=2
+  1174ms CLI->ENG Target.setDiscoverTargets id=3 sid=-
+  1174ms ENG->CLI response id=3
+  1175ms CLI->ENG Target.setAutoAttach id=4 sid=-
+  1175ms ENG->CLI response id=4
+  1176ms CLI->ENG Browser.getVersion id=5 sid=-
+  1176ms ENG->CLI response id=5
+  1177ms CLI->ENG Target.createTarget id=6 sid=-
+  1186ms ENG->CLI Target.targetCreated id=- sid=-
+  1186ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1186ms ENG->CLI Target.attachedToTarget id=- sid=-
+  1187ms ENG->CLI Target.targetCreated id=- sid=-
+  1190ms CLI->ENG Target.setAutoAttach id=1 sid=astra-session-9
+  1192ms CLI->ENG Runtime.runIfWaitingForDebugger id=2 sid=astra-session-9
+  1204ms ENG->CLI response id=6
+  1209ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1209ms ENG->CLI Target.attachedToTarget id=- sid=8E5C417EBE69525176BB51998CCEDB45
+  1210ms ENG->CLI response id=1
+  1214ms ENG->CLI Target.targetInfoChanged id=- sid=-
+  1218ms ENG->CLI response id=2
+
+=== cdp trace: puppeteer straight to chrome (last 60 lines) ===
+(no trace)
+
+=== done ===
+artifacts in /tmp/astra-e2e
+== astra headless ==
+04:20:38.397 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+04:20:38.648 [ERROR] engine exited during startup (status 134). Try --no-sandbox or check ASTRA_ENGINE_LOG
+04:20:38.648 [WARN ] engine failed to start, retrying with --no-sandbox
+04:20:38.648 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (headless)
+04:20:38.809 [INFO ] engine ready: Chrome/153.0.8010.47 on port 46857 (ws://127.0.0.1:46857/devtools/browser/29121671-718d-42db-a524-5a9dd9cddc49)
+04:20:38.812 [INFO ] filters: 142 builtin rules active
+04:20:38.812 [INFO ] cache: /tmp/astra-e2e/cache (0 entries, 0.0 MB)
+04:20:38.939 [DEBUG] engine websocket connected (fd 3)
+04:20:38.939 [INFO ] astra control plane ready on http://127.0.0.1:9222  (ws: /devtools/browser/astra-4262)
+04:20:38.954 [DEBUG] http GET /json/version
+04:20:41.052 [DEBUG] http GET /json/version
+04:20:41.070 [DEBUG] websocket client connected (fd 5)
+04:20:41.082 [DEBUG] session astra-session-1 -> engine FC06FD31D0D4FC7D6CE50BABA0C041C2 (target 655FDA11D00A34335BAE88748AC617A0)
+04:20:41.082 [DEBUG] session astra-session-2 -> engine 18546D3C05A72B5BCD8115B4491E9110 (target AAD668AC41AF3899B350B74B4D423732)
+04:20:41.082 [DEBUG] session astra-session-3 -> engine 458E92C381D901A2F23211B3DE46AAE7 (target C517BCEEEA461C0F75519CEFEA44872F)
+04:20:41.085 [DEBUG] session astra-session-4 -> engine 1BCA785AF4AA0582698A945CC5E49954 (target EAF5D1594C50A2C89585DA1CCB1B6BCA)
+04:20:41.085 [DEBUG] session astra-session-5 -> engine 2543E211ED24F0329F830C5B56FC9EA6 (target F3FD38CE749D3FC6FE40B296101DFA3C)
+04:20:41.085 [DEBUG] session astra-session-6 -> engine C239985F1F9C29023769DC9BF6D754C2 (target EDD653056A90FC70DB8603D6ECE8BAA5)
+04:20:41.085 [DEBUG] session astra-session-7 -> engine 893DEEA62B58439AB2A5E41559B7B8C1 (target 2CCBBE1C8B63DD02994E6491D7250202)
+04:20:41.492 [DEBUG] compat: attaching F2BD4B26E614881858F6D9EF672C47BE (iframe) for a client
+04:20:41.493 [DEBUG] session astra-session-8 -> engine CD353450C80636B0B6B984FE786DDD73 (target F2BD4B26E614881858F6D9EF672C47BE)
+04:21:38.988 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:22:39.086 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:23:39.183 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:24:39.280 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:25:39.378 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:26:39.477 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:27:39.575 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:27:40.827 [DEBUG] http GET /json/version
+04:27:42.058 [DEBUG] websocket client connected (fd 5)
+04:27:42.074 [DEBUG] session astra-session-9 -> engine 8E5C417EBE69525176BB51998CCEDB45 (target CCA24F79F7A507153B5D3A203D8F0CC4)
+04:27:42.098 [DEBUG] session astra-session-10 -> engine 1B77F6FBC10AE76EA94CBEB717B34B3F (target 56853B19BE35841C32FA0B53C87DFB38)
+
+--- astra bandwidth report -------------------------------
+ requests inspected : 0
+ blocked (ads)      : 0
+ cache hits         : 0 (revalidated 0)
+ images optimized   : 0
+ text minified      : 0
+ would download     : 0.00 B
+ actually delivered : 0.00 B
+ total saved        : 0.00 B (0.0%)
+ cpu: image 0.0 ms, minify 0.0 ms
+---------------------------------------------------------
+== astra full ==
+04:28:33.367 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (windowed)
+04:28:33.618 [ERROR] engine exited during startup (status 133). Try --no-sandbox or check ASTRA_ENGINE_LOG
+04:28:33.618 [WARN ] engine failed to start, retrying with --no-sandbox
+04:28:33.618 [INFO ] launching engine: /home/runner/.cache/puppeteer/chrome/linux-153.0.8010.47/chrome-linux64/chrome (windowed)
+04:28:36.802 [INFO ] engine ready: Chrome/153.0.8010.47 on port 36441 (ws://127.0.0.1:36441/devtools/browser/b037aac9-08a3-4266-b5e0-8070a8ed0aec)
+04:28:36.802 [INFO ] filters: 142 builtin rules active
+04:28:36.802 [INFO ] cache: /tmp/astra-e2e/cache-full (0 entries, 0.0 MB)
+04:28:36.836 [DEBUG] engine websocket connected (fd 3)
+04:28:36.836 [INFO ] astra control plane ready on http://127.0.0.1:9223  (ws: /devtools/browser/astra-7375)
+04:28:36.996 [DEBUG] http GET /json/version
+04:28:37.335 [DEBUG] http GET /json/version
+04:28:37.354 [DEBUG] websocket client connected (fd 5)
+04:28:37.368 [DEBUG] session astra-session-1 -> engine FFA50D1412601B151F0908C5590B6CF3 (target 104DD2FB336096A81CB23C898539B413)
+04:28:37.368 [DEBUG] session astra-session-2 -> engine D4001C290F218ED5D448EE7171E09669 (target 702E29D6B68C469EDA00101B01EC32D8)
+04:28:37.368 [DEBUG] session astra-session-3 -> engine E89E93974E1471E5F9A61CEC367F2DA5 (target BE18A1DF06A338EEFAC9F9153412CF06)
+04:28:37.368 [DEBUG] session astra-session-4 -> engine 69BD52D6275A4677BE1D7623DFFEE216 (target D4AD9B4D929F02BBCB3C977E4FB6C0F4)
+04:28:37.371 [DEBUG] session astra-session-5 -> engine 8A6C3C8DE00F42A8D4F42B2B0637B9DE (target E253787789AC9177C7C2BFE1893583D5)
+04:28:37.371 [DEBUG] session astra-session-6 -> engine 8676F59B354C43393C917A77FEEC9C1D (target 51B1AF4B808696B5028EF11DB0F4D32B)
+04:28:37.374 [DEBUG] session astra-session-7 -> engine 7CAF44D304AF106D52D743A60E46D406 (target 3D70B66853253A2F470488B02904D3F3)
+04:29:36.857 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:30:36.955 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:31:37.054 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:32:37.150 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:33:37.248 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+04:34:37.346 [INFO ] saved 0.0% so far (0 requests, 0 blocked, 0 cached)
+== site ==
+127.0.0.1 - - [17/Sep/2026 04:20:27] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:26] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:26] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:26] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:26] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:26] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:28] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 04:28:28] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [17/Sep/2026 04:28:28] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:28] "GET /assets/clip.webm HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:28] "GET /assets/photo-2.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:28] "GET /assets/photo-1.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:28] "GET /assets/photo-3.png HTTP/1.1" 200 -
+127.0.0.1 - - [17/Sep/2026 04:28:28] code 404, message File not found
+127.0.0.1 - - [17/Sep/2026 04:28:28] "GET /favicon.ico HTTP/1.1" 404 -

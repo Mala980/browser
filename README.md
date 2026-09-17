@@ -275,6 +275,10 @@ bukan dengan perkiraan Astra, sehingga kedua angka berasal dari sumber yang sama
 Astra hanya ada di pass lite: saat optimizer mati ia meneruskan body apa adanya, jadi ia tidak
 pernah melihat (dan tidak bisa menghitung) byte yang lewat — karenanya `n/a`.
 
+Angka akhirnya bergerak antar run (run lain di CI: **64,5%** — 2889,5 KB vs 8131,0 KB) karena
+bagian halaman yang keburu diunduh (klip video, gambar di bawah lipatan) bergantung pada
+waktu. Yang stabil adalah penghematan per gambar: 70,6–76,7% (lihat tabel A).
+
 Jalankan `astra bench <url>` atau `astra open <url> --stats` untuk angka di perangkat/jaringan
 Anda sendiri; metodologi dan cara membaca metrik ada di [docs/BANDWIDTH.md](docs/BANDWIDTH.md).
 Blok iklan/tracker menambah penghematan di luar angka di atas pada halaman sungguhan (ukurannya

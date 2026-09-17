@@ -951,6 +951,12 @@ static void engine_on_msg(conn_t *c, const uint8_t *data, size_t len) {
             json_free(m);
             return;
         }
+        /* An event for a session astra does not manage: delivering the engine's
+         * id would only confuse the client (it would drop the event), so hand it
+         * over as a browser level event instead. */
+        LOGT("event %s for unknown engine session %s: delivered at browser level",
+             method, sid);
+        json_del(m, "sessionId");
     }
     fanout_event(m);
     json_free(m);

@@ -156,6 +156,7 @@ class MockEngine:
         self.next_session = 2
         self.targets = {'T1': Target('T1', 'page', 'about:blank'),
                         'T2': Target('T2', 'other', '')}
+        self.sessions = {}  # sessionId -> targetId, in creation order
 
     @staticmethod
     def _filter_matches(ttype, filters):
@@ -173,6 +174,7 @@ class MockEngine:
     def _attach(self, target, auto=False):
         sid = 'S%d' % self.next_session
         self.next_session += 1
+        self.sessions[sid] = target.tid
         self.ws.send({'method': 'Target.attachedToTarget',
                       'params': {'sessionId': sid, 'waitingForDebugger': auto,
                                  'targetInfo': target.info()}})
@@ -377,6 +379,19 @@ class MockEngine:
             return ok({'requestId': rid})
         if method == 'Mock.getLog':
             return ok({'log': self.log})
+        if method == 'Mock.emitEvent':
+            # {'method': ..., 'params': ..., 'sessionId': ...} - the session id is
+            # a top level field, exactly like Chrome sends flattened session events
+            ev = {'method': params.get('method')}
+            if params.get('params') is not None:
+                ev['params'] = params['params']
+            if params.get('sessionId'):
+                ev['sessionId'] = params['sessionId']
+            self.ws.send(ev)
+            return ok()
+        if method == 'Mock.getSessions':
+            return ok({'sessions': [{'sessionId': s, 'targetId': t}
+                                    for s, t in self.sessions.items()]})
         if method == 'Mock.reset':
             self.log = []
             return ok()

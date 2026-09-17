@@ -192,8 +192,10 @@ def main():
     astra = subprocess.Popen(
         [ASTRA, 'serve',
          '--engine-url', 'ws://127.0.0.1:%d/devtools/browser/mock' % MOCK_PORT,
-         '--port', str(ASTRA_PORT), '--cache-dir', cache_dir, '--log-level', '3'],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+         '--port', str(ASTRA_PORT), '--cache-dir', cache_dir,
+         '--log-level', os.environ.get('ASTRA_IT_LOG', '3')],
+        stdout=None if os.environ.get('ASTRA_IT_LOG') else subprocess.PIPE,
+        stderr=subprocess.STDOUT)
     try:
         if not wait_port(ASTRA_PORT):
             out = astra.stdout.read().decode() if astra.stdout else ''
@@ -321,6 +323,38 @@ def main():
               'Astra.getVersion works over CDP', str(r)[:160])
 
         # puppeteer/go-rod send everything on a page session: same domain must work there too
+        # Flattened session events carry the engine session id at the top level:
+        # Puppeteer drops every event addressed to a session it does not know, so
+        # astra must translate that id (regression: it used to leak "S1").
+        # Flattened session events carry the engine session id at the top level.
+        # Puppeteer drops every event addressed to a session it does not know, so
+        # astra must translate that id (regression: it used to leak "S2"/"S3"...).
+        sessions = c.request('Mock.getSessions')['result']['sessions']
+        engine_sid = sessions[-1]['sessionId'] if sessions else None
+        check(engine_sid is not None, 'the engine exposes its session ids',
+              str(sessions)[:160])
+        c.request('Mock.emitEvent', {'method': 'Page.loadEventFired',
+                                     'params': {'timestamp': 1.0},
+                                     'sessionId': engine_sid})
+        flat = c.wait_for(lambda m: m.get('method') == 'Page.loadEventFired', timeout=5.0)
+        check(flat is not None, 'flattened session event reaches the client',
+              str(flat)[:160])
+        check(flat is not None and flat.get('sessionId', '').startswith('astra-session'),
+              'astra translates the engine session id of flattened events',
+              str(flat)[:160])
+
+        # ... and an event for a session astra does not manage must not leak an id
+        c.request('Mock.emitEvent', {'method': 'Page.frameStoppedLoading',
+                                     'params': {'frameId': 'F1'},
+                                     'sessionId': 'S-unknown-42'})
+        unknown = c.wait_for(lambda m: m.get('method') == 'Page.frameStoppedLoading',
+                             timeout=5.0)
+        check(unknown is not None, 'event for an unknown session is still delivered',
+              str(unknown)[:160])
+        check(unknown is not None and not str(unknown.get('sessionId', '')).startswith('S-unknown'),
+              'astra never leaks an engine session id the client cannot resolve',
+              str(unknown)[:160])
+
         r = c.request('Astra.getStats', session=session)
         check(r is not None and 'result' in r and r['result'].get('requests', 0) >= 4,
               'Astra.getStats works on a page session (as puppeteer sends it)', str(r)[:160])

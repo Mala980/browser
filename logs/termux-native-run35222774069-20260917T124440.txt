@@ -1,0 +1,53 @@
+termux native build host: Linux 6.17.0-1022-azure x86_64
+prefix: /data/data/com.termux/files/usr
+Reading package lists...
+Building dependency tree...
+1 package can be upgraded. Run 'apt list --upgradable' to see it.
+Setting up ndk-sysroot (29-3) ...
+Setting up make (4.4.1-1) ...
+Setting up libcompiler-rt (21.1.8-3) ...
+Setting up libxml2 (2.15.4-1) ...
+Setting up libllvm (21.1.8-3) ...
+Setting up lld (21.1.8-3) ...
+Setting up llvm (21.1.8-3) ...
+Setting up clang (21.1.8-3) ...
+clang version 21.1.8
+building astra 0.1.0 for x86_64 with clang
+built: build/astra (396K)
+dpkg-deb: building package 'astra' in 'dist/astra_0.1.0_x86_64.deb'.
+built dist/astra_0.1.0_x86_64.deb
+built dist/astra-0.1.0-termux-x86_64.tar.xz
+total 692K
+-rwxr-xr-x 1 system system 396K Sep 17 12:44 astra
+-rw-r--r-- 1 system system 144K Sep 17 12:44 astra-0.1.0-termux-x86_64.tar.xz
+-rw-r--r-- 1 system system 152K Sep 17 12:44 astra_0.1.0_x86_64.deb
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/cache.c -o build/src/cache.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/cdp.c -o build/src/cdp.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/config.c -o build/src/config.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/engine.c -o build/src/engine.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/filters.c -o build/src/filters.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/http.c -o build/src/http.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/image.c -o build/src/image.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/json.c -o build/src/json.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/minify.c -o build/src/minify.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/optimizer.c -o build/src/optimizer.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/stats.c -o build/src/stats.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/util.c -o build/src/util.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -c src/ws.c -o build/src/ws.o
+cc -std=gnu11 -O2 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-format-truncation -fno-omit-frame-pointer -D_GNU_SOURCE -Isrc -Isrc/.. build/src/cache.o build/src/cdp.o build/src/config.o build/src/engine.o build/src/filters.o build/src/http.o build/src/image.o build/src/json.o build/src/minify.o build/src/optimizer.o build/src/stats.o build/src/util.o build/src/ws.o tests/unit/test_all.c -o build/astra-test  -lm -lpthread
+astra unit tests
+  FAIL tests/unit/test_all.c:295: cache init
+  FAIL tests/unit/test_all.c:300: cache put
+  FAIL tests/unit/test_all.c:302: cache get
+  FAIL tests/unit/test_all.c:303: entry fresh
+  FAIL tests/unit/test_all.c:304: expected "text/css" got ""
+  FAIL tests/unit/test_all.c:305: body roundtrip
+  FAIL tests/unit/test_all.c:306: expected ""etag1"" got ""
+  FAIL tests/unit/test_all.c:315: put expired entry
+  FAIL tests/unit/test_all.c:316: get expired entry
+  FAIL tests/unit/test_all.c:444: config load
+  FAIL tests/unit/test_all.c:445: lite off from file
+  FAIL tests/unit/test_all.c:446: port from file
+  FAIL tests/unit/test_all.c:447: width from file
+
+141 checks, 13 failed
